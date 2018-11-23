@@ -1,13 +1,12 @@
 import cv2
 import numpy as np
-import other
+from ..common import draw_img
 import base64
 import os
 import copy
-import Dataset
-import Dataset.port as port
+import lib.dataset_handler
 import torch
-import Net
+from Net import net as Net
 import torchvision.models
 anchor_height = [11, 16, 22, 32, 46, 66, 94, 134, 191, 273]
 
@@ -31,9 +30,9 @@ if __name__ == '__main__':
                     result.append((j, k, i, float(score[i, j, k, 1].detach().numpy())))
     # print(result)
     for box in result:
-        im = other.draw_box_h_and_c(im, box[1], box[0] * 16 + 7.5, anchor_height[box[2]])
-    gt = Dataset.port.read_gt_file('../dataset/OCR_dataset/ctpn/test_gt/gt_img_0059.txt')
+        im = draw_img.draw_box_h_and_c(im, box[1], box[0] * 16 + 7.5, anchor_height[box[2]])
+    gt = lib.dataset_handler.read_gt_file('../dataset/OCR_dataset/ctpn/test_gt/gt_img_0059.txt')
     for gt_box in gt:
-        im = other.draw_box_4pt(im, gt_box, (255, 0, 0))
+        im = draw_img.draw_box_4pt(im, gt_box, (255, 0, 0))
 
     cv2.imwrite("./test_result/test.jpg", im)

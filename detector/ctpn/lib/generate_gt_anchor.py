@@ -1,5 +1,5 @@
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 import math
 import common
 import copy
@@ -22,7 +22,7 @@ def generate_gt_anchor(img, box, anchor_width=16):
         box = [float(box[i]) for i in range(len(box))]
 
     draw_img_gt = copy.deepcopy(img)
-    draw_img_gt = other.draw_box_4pt(draw_img_gt, box, color=(0, 0, 255))
+    draw_img_gt = common.draw_box_4pt(draw_img_gt, box, color=(0, 0, 255))
     ticks = time.time()
     cv2.imwrite(os.path.join(DRAW_PREFIX, "gt_"+str(int(ticks))+".jpg"), draw_img_gt)
 
@@ -45,7 +45,7 @@ def generate_gt_anchor(img, box, anchor_width=16):
         h = y_bottom[i] - y_top[i] + 1  # the height of anchor box
         cy = (float(y_bottom[i]) + float(y_top[i])) / 2.0  # the center point of anchor box
         result.append((position, cy, h))
-        draw_img = other.draw_box_h_and_c(draw_img, position, cy, h)
+        draw_img = common.draw_box_h_and_c(draw_img, position, cy, h)
         ticks = time.time()
         cv2.imwrite(os.path.join(DRAW_PREFIX, str(int(ticks))+".jpg"), draw_img)
     return result
@@ -68,7 +68,7 @@ def cal_y_top_and_bottom(raw_img, position_pair, box):
             img[i, j, 0] = 0
     top_flag = False
     bottom_flag = False
-    img = other.draw_box_4pt(img, box, color=(255, 0, 0))
+    img = common.draw_box_4pt(img, box, color=(255, 0, 0))
     # calc top y coordinate, pixel from top to down loop
     for k in range(len(position_pair)):
         # calc top y coordinate
