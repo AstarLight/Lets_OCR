@@ -5,7 +5,6 @@ import lib.tag_anchor
 import lib.generate_gt_anchor
 import lib.dataset_handler
 import lib.utils
-import Net.net as Net
 import numpy as np
 import os
 import Net.net as Net
@@ -34,9 +33,7 @@ def draw_loss_plot(train_loss_list=[], test_loss_list=[]):
     plt.plot(x2, y2, '.-')
     plt.xlabel('test loss vs. iterators')
     plt.ylabel('test loss')
-    plt.show()
     plt.savefig("test_train_loss.jpg")
-
 
 if __name__ == '__main__':
     cf = ConfigParser.ConfigParser()
@@ -90,7 +87,7 @@ if __name__ == '__main__':
             value.requires_grad = True
     # for name, value in net.named_parameters():
     #     print('name: {0}, grad: {1}'.format(name, value.requires_grad))
-    net.load_state_dict(torch.load('./other/vgg16.model'))
+    net.load_state_dict(torch.load('./lib/vgg16.model'))
     # net.load_state_dict(model_zoo.load_url(model_urls['vgg16']))
     lib.utils.init_weight(net)
     if using_cuda:

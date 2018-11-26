@@ -69,6 +69,21 @@ def scale_img(img, gt, shortest_side=600):
     return img, scale_gt
 
 
+def scale_img_only(img, shortest_side=600):
+    height = img.shape[0]
+    width = img.shape[1]
+    scale = float(shortest_side)/float(min(height, width))
+    img = cv2.resize(img, (0, 0), fx=scale, fy=scale)
+    if img.shape[0] < img.shape[1] and img.shape[0] != 600:
+        img = cv2.resize(img, (600, img.shape[1]))
+    elif img.shape[0] > img.shape[1] and img.shape[1] != 600:
+        img = cv2.resize(img, (img.shape[0], 600))
+    elif img.shape[0] != 600:
+        img = cv2.resize(img, (600, 600))
+
+    return img
+
+
 def check_img(img):
     if img is None:
         return False
