@@ -6,8 +6,6 @@ import time
 import os
 import draw_image
 
-DRAW_PREFIX = './anchor_draw'
-
 
 def generate_gt_anchor(img, box, anchor_width=16, draw_img_gt=None):
     """
@@ -19,9 +17,6 @@ def generate_gt_anchor(img, box, anchor_width=16, draw_img_gt=None):
     """
     if not isinstance(box[0], float):
         box = [float(box[i]) for i in range(len(box))]
-
-    #draw_img_gt = copy.deepcopy(img)
-    draw_img_gt = draw_image.draw_box_4pt(draw_img_gt, box, color=(0, 0, 255))
 
     result = []
     left_anchor_num = int(math.floor(max(min(box[0], box[6]), 0) / anchor_width))  # the left side anchor of the text box, downwards
@@ -36,13 +31,14 @@ def generate_gt_anchor(img, box, anchor_width=16, draw_img_gt=None):
     y_top, y_bottom = cal_y_top_and_bottom(img, position_pair, box)
 
     #print("image shape: %s, pair_num: %s, top_num:%s, bot_num:%s" % (img.shape, len(position_pair), len(y_top), len(y_bottom)))
-    draw_img = copy.deepcopy(img)
+
     for i in range(len(position_pair)):
         position = int(position_pair[i][0] / anchor_width)  # the index of anchor box
         h = y_bottom[i] - y_top[i] + 1  # the height of anchor box
         cy = (float(y_bottom[i]) + float(y_top[i])) / 2.0  # the center point of anchor box
         result.append((position, cy, h))
         draw_img_gt = draw_image.draw_box_h_and_c(draw_img_gt, position, cy, h)
+    draw_img_gt = draw_image.draw_box_4pt(draw_img_gt, box, color=(0, 0, 255), thickness=1)
     return result, draw_img_gt
 
 
