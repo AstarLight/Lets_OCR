@@ -1,8 +1,9 @@
 import torch
 import cv2
-import lib.generate_gt_anchor
 import lib.dataset_handler
+import lib.generate_gt_anchor
 import lib.tag_anchor
+import Net
 import numpy as np
 import os
 import time
@@ -10,8 +11,10 @@ import random
 
 
 def val(net, criterion, batch_num, using_cuda, logger):
-    img_root = '/home/ljs/OCR_dataset/MLT/val_img'
-    gt_root = '/home/ljs/OCR_dataset/MLT/val_loc_gt'
+    #img_root = '/home/ljs/OCR_dataset/MLT/val_img'
+    #gt_root = '/home/ljs/OCR_dataset/MLT/val_loc_gt'
+    img_root = '/home/ljs/ctpn_torch/dataset/OCR_dataset/ctpn/test_im'
+    gt_root = '/home/ljs/ctpn_torch/dataset/OCR_dataset/ctpn/test_gt'
     img_list = os.listdir(img_root)
     random_list = random.sample(img_list, batch_num)
     total_loss = 0
@@ -47,13 +50,18 @@ def val(net, criterion, batch_num, using_cuda, logger):
         negative = []
         vertical_reg = []
         side_refinement_reg = []
-        for box in gt_txt:
-            gt_anchor = lib.generate_gt_anchor.generate_gt_anchor(img, box)
-            positive1, negative1, vertical_reg1, side_refinement_reg1 = lib.tag_anchor.tag_anchor(gt_anchor, score, box)
-            positive += positive1
-            negative += negative1
-            vertical_reg += vertical_reg1
-            side_refinement_reg += side_refinement_reg1
+        try:
+            for box in gt_txt:
+                gt_anchor = lib.generate_gt_anchor.generate_gt_anchor(img, box)
+                positive1, negative1, vertical_reg1, side_refinement_reg1 = lib.tag_anchor.tag_anchor(gt_anchor, score, box)
+                positive += positive1
+                negative += negative1
+                vertical_reg += vertical_reg1
+                side_refinement_reg += side_refinement_reg1
+        except:
+                print("warning: img %s raise error!" % os.path.join(img_root, im))
+                batch_num -= 1
+                continue
 
         if len(vertical_reg) == 0 or len(positive) == 0 or len(side_refinement_reg) == 0:
             batch_num -= 1

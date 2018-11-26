@@ -1,22 +1,25 @@
 import torch.optim as optim
 import torch
 import cv2
+import lib.tag_anchor
+import lib.generate_gt_anchor
 import lib.dataset_handler
-import Net
+import lib.utils
+import Net.net as Net
 import numpy as np
 import os
-import lib.utils
+import Net.net as Net
+import Net.loss as Loss
 import ConfigParser
 import time
-import evaluate.val as val_func
-import lib.generate_gt_anchor
-import lib.tag_anchor
+import evaluate
 import logging
 import datetime
 import copy
 import random
 import matplotlib.pyplot as plt
 
+DRAW_PREFIX = './anchor_draw'
 
 def draw_loss_plot(train_loss_list=[], test_loss_list=[]):
     x1 = range(0, len(train_loss_list))
@@ -54,7 +57,7 @@ if __name__ == '__main__':
 
     gpu_id = cf.get('global', 'gpu_id')
     epoch = cf.getint('global', 'epoch')
-    val_batch_size = cf.get('global', 'val_batch')
+    val_batch_size = cf.getint('global', 'val_batch')
     logger.info('Total epoch: {0}'.format(epoch))
 
     using_cuda = cf.getboolean('global', 'using_cuda')
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     net.train()
     print(net)
 
-    criterion = Net.CTPN_Loss(using_cuda=using_cuda)
+    criterion = Loss.CTPN_Loss(using_cuda=using_cuda)
 
     img_root = '/home/ljs/OCR_dataset/MLT/train_img'  # icdar2017 MLT
     gt_root = '/home/ljs/OCR_dataset/MLT/train_gt'
@@ -158,19 +161,29 @@ if __name__ == '__main__':
             negative = []
             vertical_reg = []
             side_refinement_reg = []
-            # loop all bbox in one image
-            for box in gt_txt:
-                # generate anchors from one bbox
-                gt_anchor = lib.generate_gt_anchor.generate_gt_anchor(img, box)
-                positive1, negative1, vertical_reg1, side_refinement_reg1 = lib.tag_anchor.tag_anchor(gt_anchor, score, box)
-                positive += positive1
-                negative += negative1
-                vertical_reg += vertical_reg1
-                side_refinement_reg += side_refinement_reg1
+
+            visual_img = copy.deepcopy(img)
+
+            try:
+                # loop all bbox in one image
+                for box in gt_txt:
+                    # generate anchors from one bbox
+                    gt_anchor, visual_img = lib.generate_gt_anchor.generate_gt_anchor(img, box, draw_img_gt=visual_img)
+                    positive1, negative1, vertical_reg1, side_refinement_reg1 = lib.tag_anchor.tag_anchor(gt_anchor, score, box)
+                    positive += positive1
+                    negative += negative1
+                    vertical_reg += vertical_reg1
+                    side_refinement_reg += side_refinement_reg1
+            except:
+                print("warning: img %s raise error!")
+                iteration += 1
+                continue
 
             if len(vertical_reg) == 0 or len(positive) == 0 or len(side_refinement_reg) == 0:
                 iteration += 1
                 continue
+
+            cv2.imwrite(os.path.join(DRAW_PREFIX, im), visual_img)
             optimizer.zero_grad()
             loss, cls_loss, v_reg_loss, o_reg_loss = criterion(score, vertical_pred, side_refinement, positive,
                                                                negative, vertical_reg, side_refinement_reg)
@@ -207,7 +220,7 @@ if __name__ == '__main__':
             if iteration % val_iter == 0:
                 net.eval()
                 logger.info('Start evaluate at {0} epoch {1} iteration.'.format(i, iteration))
-                val_loss = val_func.val(net, criterion, val_batch_size, using_cuda, logger)
+                val_loss = evaluate.val(net, criterion, val_batch_size, using_cuda, logger)
                 logger.info('End evaluate.')
                 net.train()
                 start_time = time.time()
