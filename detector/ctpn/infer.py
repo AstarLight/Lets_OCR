@@ -62,7 +62,8 @@ def infer_one(im_name, net):
         cy = vc * ha + cya
         h = math.pow(10, vh) * ha
         lib.draw_image.draw_box_2pt(im, for_nms[i, 0:4])
-    cv2.imwrite('infer_'+im_name, im)
+    _, basename = os.path.split(im_name)
+    cv2.imwrite('./infer_'+basename, im)
 
 def random_test(net):
     test_pair = gen_test_images(GT_ROOT, IMG_ROOT, 50)
