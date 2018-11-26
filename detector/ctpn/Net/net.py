@@ -1,20 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import img2col
 import numpy as np
-
-
-class Im2col(nn.Module):
-    def __init__(self, kernel_size, stride, padding):
-        super(Im2col, self).__init__()
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-
-    def forward(self, x):
-        height = x.shape[2]
-        x = F.unfold(x, self.kernel_size, padding=self.padding, stride=self.stride)
-        x = x.reshape((x.shape[0], x.shape[1], height, -1))
-        return x
+import torch
 
 
 class VGG_16(nn.Module):
@@ -89,7 +77,7 @@ class CTPN(nn.Module):
         self.cnn = nn.Sequential()
         self.cnn.add_module('VGG_16', VGG_16())
         self.rnn = nn.Sequential()
-        self.rnn.add_module('im2col', Im2col((3, 3), (1, 1), (1, 1)))
+        self.rnn.add_module('im2col', img2col.Im2col((3, 3), (1, 1), (1, 1)))
         self.rnn.add_module('blstm', BLSTM(3 * 3 * 512, 128))
         self.FC = nn.Conv2d(256, 512, 1)
         self.vertical_coordinate = nn.Conv2d(512, 2 * 10, 1)
@@ -109,7 +97,10 @@ class CTPN(nn.Module):
             score = score.transpose(1, 2)
             score = score.transpose(2, 3)
             score = score.reshape((-1, 2))
-            score = F.softmax(score, dim=1)
+            #score = F.softmax(score, dim=1)
             score = score.reshape((10, vertical_pred.shape[2], -1, 2))
+            vertical_pred = vertical_pred.reshape((vertical_pred.shape[0], 10, 2, vertical_pred.shape[2],
+                                                   vertical_pred.shape[3]))
+            vertical_pred = vertical_pred.squeeze(0)
         side_refinement = self.side_refinement(x)
         return vertical_pred, score, side_refinement
