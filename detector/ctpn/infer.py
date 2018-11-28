@@ -54,13 +54,13 @@ def get_text_lines(text_proposals, im_size, scores=0):
 
     for index, tp_indices in enumerate(text_proposals):
         text_line_boxes = np.array(tp_indices)  # 每个文本行的全部小框
-        print(text_line_boxes)
-        print(type(text_line_boxes))
-        print(text_line_boxes.shape)
+        #print(text_line_boxes)
+        #print(type(text_line_boxes))
+        #print(text_line_boxes.shape)
         X = (text_line_boxes[:, 0] + text_line_boxes[:, 2]) / 2  # 求每一个小框的中心x，y坐标
         Y = (text_line_boxes[:, 1] + text_line_boxes[:, 3]) / 2
-        print(X)
-        print(Y)
+        #print(X)
+        #print(Y)
 
         z1 = np.polyfit(X, Y, 1)  # 多项式拟合，根据之前求的中心店拟合一条直线（最小二乘）
 
@@ -117,14 +117,15 @@ def get_text_lines(text_proposals, im_size, scores=0):
             y2 += y
             x3 -= x
             y3 -= y
+        # clock-wise order
         text_recs[index, 0] = x1
         text_recs[index, 1] = y1
         text_recs[index, 2] = x2
         text_recs[index, 3] = y2
-        text_recs[index, 4] = x3
-        text_recs[index, 5] = y3
-        text_recs[index, 6] = x4
-        text_recs[index, 7] = y4
+        text_recs[index, 4] = x4
+        text_recs[index, 5] = y4
+        text_recs[index, 6] = x3
+        text_recs[index, 7] = y3
         text_recs[index, 8] = line[4]
         index = index + 1
 
@@ -133,21 +134,15 @@ def get_text_lines(text_proposals, im_size, scores=0):
     return text_recs
 
 
-def meet_v_iou(index1, index2, text_proposals, heights):
-    def overlaps_v(index1, index2):
-        h1=heights[index1]
-        h2=heights[index2]
-        y0=max(text_proposals[index2][1], text_proposals[index1][1])
-        y1=min(text_proposals[index2][3], text_proposals[index1][3])
-        return max(0, y1-y0+1)/min(h1, h2)
+def meet_v_iou(y1, y2, h1, h2):
+    def overlaps_v(y1, y2, h1, h2):
+        return max(0, y2-y1+1)/min(h1, h2)
 
-    def size_similarity(index1, index2):
-        h1=heights[index1]
-        h2=heights[index2]
+    def size_similarity(h1, h2):
         return min(h1, h2)/max(h1, h2)
 
-    return overlaps_v(index1, index2) >= 0.6 and \
-           size_similarity(index1, index2) >= 0.6
+    return overlaps_v(y1, y2, h1, h2) >= 0.7 and \
+           size_similarity(h1, h2) >= 0.6
 
 
 def get_successions(index, im_size, text_proposals, boxes_table):
@@ -194,7 +189,17 @@ def gen_test_images(gt_root, img_root, test_num=10):
     return test_pair
 
 
-def get_text_anchors(anchors=[]):
+def get_anchor_h(anchor, v):
+    vc = v[int(anchor[7]), 0, int(anchor[5]), int(anchor[6])]
+    vh = v[int(anchor[7]), 1, int(anchor[5]), int(anchor[6])]
+    cya = anchor[5] * 16 + 7.5
+    ha = anchor_height[int(anchor[7])]
+    cy = vc * ha + cya
+    h = math.pow(10, vh) * ha
+    return h
+
+
+def get_text_anchors(v, anchors=[]):
     anchor_graph = np.zeros(len(anchors), np.bool)
     texts = []
     for i, anchor in enumerate(anchors):
@@ -202,15 +207,75 @@ def get_text_anchors(anchors=[]):
         if not anchor_graph[i]:
             one_text.append(anchor)
             anchor_graph[i] = True
-            center_x1 = (anchor[2]-anchor[0])/2
+            center_x1 = (anchor[2] + anchor[0])/2
+            center_y1 = (anchor[3] + anchor[1]) / 2
+            h1 = get_anchor_h(anchor, v)
             for j in range(i+1, len(anchors)):
-                center_x2 = (anchors[j][2]-anchors[j][0])/2
-                if(abs(center_x1-center_x2)) < 50:   # less than 50 pixel between each anchor
-                    one_text.append(anchors[j])
-                    anchor_graph[j] = True
+                if not anchor_graph[j]:
+                    center_x2 = (anchors[j][2] + anchors[j][0])/2
+                    center_y2 = (anchors[j][3] + anchors[j][1]) / 2
+                    h2 = get_anchor_h(anchors[j], v)
+                    print("h1 is %s, h2 is %s" % (h1,h2))
+                    if abs(center_x1-center_x2) < 50 and \
+                            meet_v_iou(max(anchor[1], anchors[j][1]), min(anchor[3], anchors[j][3]), h1, h2):   # less than 50 pixel between each anchor
+                        one_text.append(anchors[j])
+                        #print(anchors[j])
+                        anchor_graph[j] = True
         if len(one_text) != 0:
             texts.append(one_text)
+            print(one_text)
     return texts
+
+
+def get_ssss(v, anchors=[]):
+    texts = []
+    for i, anchor in enumerate(anchors):
+        neighbours = []
+        neighbours.append(i)
+        center_x1 = (anchor[2] + anchor[0]) / 2
+        center_y1 = (anchor[3] + anchor[1]) / 2
+        h1 = get_anchor_h(anchor, v)
+        # find i's neighbour
+        for j in range(i + 1, len(anchors)):
+            center_x2 = (anchors[j][2] + anchors[j][0]) / 2
+            center_y2 = (anchors[j][3] + anchors[j][1]) / 2
+            h2 = get_anchor_h(anchors[j], v)
+            print("h1 is %s, h2 is %s" % (h1, h2))
+            if abs(center_x1 - center_x2) < 50 and \
+                    meet_v_iou(max(anchor[1], anchors[j][1]), min(anchor[3], anchors[j][3]), h1, h2):  # less than 50 pixel between each anchor
+                neighbours.append(j)
+
+        # now we get i's neighbours, then we find if i also locate in somewhere
+        for k, line in enumerate(texts):
+            for index in line:
+                if index == i:
+                    texts[k] += neighbours
+                    texts[k] = list(set(texts[k]))
+                    neighbours = []
+        if len(neighbours) != 0:
+            texts.append(neighbours)
+
+    # ok, we combine again.
+    for i, line in enumerate(texts):
+        if len(line) == 0:
+            continue
+        for index in line:
+            for j in range(i+1, len(texts)):
+                if index in texts[j]:
+                    texts[i] += texts[j]
+                    texts[i] = list(set(texts[i]))
+                    texts[j] = []
+
+    result = []
+    print(texts)
+    for text in texts:
+        if len(text) < 2:
+            continue
+        local = []
+        for j in text:
+            local.append(anchors[j])
+        result.append(local)
+    return result
 
 
 def infer_one(im_name, net):
@@ -239,19 +304,30 @@ def infer_one(im_name, net):
     for i in nms_result:
         out_nms.append(for_nms[i, 0:8])
 
-    print(out_nms)
+    #print(out_nms)
     print(type(out_nms))
-    connect = get_text_anchors(out_nms)
-    print(connect)
+    connect = get_ssss(v, out_nms)
+    print("size of texts %s" % len(connect))
     texts = get_text_lines(connect, im.shape)
-    print(texts)
+    #print(texts)
     for box in texts:
         box = np.array(box)
         print(box)
-        lib.draw_image.draw_box_4pt(im, box[0:8])
+        lib.draw_image.draw_ploy_4pt(im, box[0:8])
 
     _, basename = os.path.split(im_name)
     cv2.imwrite('./infer_'+basename, im)
+
+    for i in nms_result:
+        vc = v[int(for_nms[i, 7]), 0, int(for_nms[i, 5]), int(for_nms[i, 6])]
+        vh = v[int(for_nms[i, 7]), 1, int(for_nms[i, 5]), int(for_nms[i, 6])]
+        cya = for_nms[i, 5] * 16 + 7.5
+        ha = anchor_height[int(for_nms[i, 7])]
+        cy = vc * ha + cya
+        h = math.pow(10, vh) * ha
+        lib.draw_image.draw_box_2pt(im, for_nms[i, 0:4])
+    _, basename = os.path.split(im_name)
+    cv2.imwrite('./infer_anchor_'+basename, im)
 
 
 def random_test(net):
