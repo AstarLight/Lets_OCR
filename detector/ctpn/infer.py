@@ -141,7 +141,7 @@ def meet_v_iou(y1, y2, h1, h2):
     def size_similarity(h1, h2):
         return min(h1, h2)/max(h1, h2)
 
-    return overlaps_v(y1, y2, h1, h2) >= 0.7 and \
+    return overlaps_v(y1, y2, h1, h2) >= 0.6 and \
            size_similarity(h1, h2) >= 0.6
 
 
@@ -178,7 +178,8 @@ def neighbour_connector(text_proposals, im_size):
 
 def gen_test_images(gt_root, img_root, test_num=10):
     img_list = os.listdir(img_root)
-    random_list = random.sample(img_list, test_num)
+    #random_list = random.sample(img_list, test_num)
+    random_list = img_list
     test_pair = []
     for im in random_list:
         name, _ = os.path.splitext(im)
@@ -361,6 +362,35 @@ def random_test(net):
         for_nms = np.array(for_nms, dtype=np.float32)
         nms_result = lib.nms.cpu_nms(for_nms, 0.3)
 
+
+
+        out_nms = []
+        for i in nms_result:
+            out_nms.append(for_nms[i, 0:8])
+
+        # print(out_nms)
+        #print(type(out_nms))
+        connect = get_ssss(v, out_nms)
+        #print("size of texts %s" % len(connect))
+        texts = get_text_lines(connect, im.shape)
+        # print(texts)
+
+        for i in nms_result:
+            vc = v[int(for_nms[i, 7]), 0, int(for_nms[i, 5]), int(for_nms[i, 6])]
+            vh = v[int(for_nms[i, 7]), 1, int(for_nms[i, 5]), int(for_nms[i, 6])]
+            cya = for_nms[i, 5] * 16 + 7.5
+            ha = anchor_height[int(for_nms[i, 7])]
+            cy = vc * ha + cya
+            h = math.pow(10, vh) * ha
+            lib.draw_image.draw_box_2pt(im, for_nms[i, 0:4])
+            #im = other.draw_box_h_and_c(im, int(for_nms[i, 6]), cy, h)
+
+        for box in texts:
+            box = np.array(box)
+            print(box)
+            lib.draw_image.draw_ploy_4pt(im, box[0:8], thickness=4)
+        cv2.imwrite(os.path.join(TEST_RESULT, os.path.basename(t[0])), im)
+"""
         for i in nms_result:
             vc = v[int(for_nms[i, 7]), 0, int(for_nms[i, 5]), int(for_nms[i, 6])]
             vh = v[int(for_nms[i, 7]), 1, int(for_nms[i, 5]), int(for_nms[i, 6])]
@@ -379,11 +409,11 @@ def random_test(net):
             im = lib.draw_image.draw_box_4pt(im, gt_box, (255, 0, 0))
 
         cv2.imwrite(os.path.join(TEST_RESULT, os.path.basename(t[0])), im)
-
+"""
 
 if __name__ == '__main__':
     net = Net.CTPN()
-    net.load_state_dict(torch.load('./model/bk_ctpn-mlt-5-end.model'))
+    net.load_state_dict(torch.load('./model/ctpn-29-end.model'))
     print(net)
     net.eval()
 
