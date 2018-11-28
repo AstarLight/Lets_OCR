@@ -8,6 +8,7 @@ import numpy as np
 import os
 import time
 import random
+import copy
 
 
 def val(net, criterion, batch_num, using_cuda, logger):
@@ -50,18 +51,20 @@ def val(net, criterion, batch_num, using_cuda, logger):
         negative = []
         vertical_reg = []
         side_refinement_reg = []
+        visual_img = copy.deepcopy(img)
+
         try:
             for box in gt_txt:
-                gt_anchor = lib.generate_gt_anchor.generate_gt_anchor(img, box)
+                gt_anchor, visual_img = lib.generate_gt_anchor.generate_gt_anchor(img, box, draw_img_gt=visual_img)
                 positive1, negative1, vertical_reg1, side_refinement_reg1 = lib.tag_anchor.tag_anchor(gt_anchor, score, box)
                 positive += positive1
                 negative += negative1
                 vertical_reg += vertical_reg1
                 side_refinement_reg += side_refinement_reg1
         except:
-                print("warning: img %s raise error!" % os.path.join(img_root, im))
-                batch_num -= 1
-                continue
+            print("warning: img %s raise error!" % os.path.join(img_root, im))
+            batch_num -= 1
+            continue
 
         if len(vertical_reg) == 0 or len(positive) == 0 or len(side_refinement_reg) == 0:
             batch_num -= 1
