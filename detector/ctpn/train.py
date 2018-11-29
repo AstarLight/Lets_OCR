@@ -19,6 +19,39 @@ import random
 import matplotlib.pyplot as plt
 
 DRAW_PREFIX = './anchor_draw'
+MSRA = '/home/ljs/data_ready/MSRA_TD500'
+ALI = '/home/ljs/data_ready/ali_icpr'
+DATASET_LIST = [MSRA, ALI]
+
+
+def loop_files(path):
+    files = []
+    l = os.listdir(path)
+    for f in l:
+        files.append(os.path.join(path, f))
+    return files
+
+
+def create_train_val():
+    train_im_list = []
+    test_im_list = []
+    train_gt_list = []
+    test_gt_list = []
+    for dataset in DATASET_LIST:
+        trains_im_path =os.path.join(dataset, 'train_im')
+        tests_im_path = os.path.join(dataset, 'test_im')
+        trains_gt_path =os.path.join(dataset, 'train_gt')
+        test_gt_path = os.path.join(dataset, 'test_gt')
+        train_im = loop_files(trains_im_path)
+        train_gt = loop_files(trains_gt_path)
+        test_im = loop_files(tests_im_path)
+        test_gt = loop_files(test_gt_path)
+        train_im_list += train_im
+        test_im_list += test_im
+        train_gt_list += train_gt
+        test_gt_list += test_gt
+    return train_im_list, train_gt_list, test_im_list, test_gt_list
+
 
 def draw_loss_plot(train_loss_list=[], test_loss_list=[]):
     x1 = range(0, len(train_loss_list))
@@ -35,11 +68,12 @@ def draw_loss_plot(train_loss_list=[], test_loss_list=[]):
     plt.ylabel('test loss')
     plt.savefig("test_train_loss.jpg")
 
+
 if __name__ == '__main__':
     cf = ConfigParser.ConfigParser()
     cf.read('./config')
 
-    log_dir = './logs_3'
+    log_dir = './logs_10'
 
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
@@ -97,12 +131,11 @@ if __name__ == '__main__':
 
     criterion = Loss.CTPN_Loss(using_cuda=using_cuda)
 
-    img_root = '/home/ljs/OCR_dataset/MLT/train_img'  # icdar2017 MLT
-    gt_root = '/home/ljs/OCR_dataset/MLT/train_gt'
+    train_im_list, train_gt_list, val_im_list, val_gt_list = create_train_val()
+    total_iter = len(train_im_list)
+    print("total training image num is %s" % len(train_im_list))
+    print("total val image num is %s" % len(val_im_list))
 
-    im_list = os.listdir(img_root)
-    total_iter = len(im_list)
-    print("total training image num is %s" % len(im_list))
     train_loss_list = []
     test_loss_list = []
 
@@ -120,13 +153,15 @@ if __name__ == '__main__':
         total_o_reg_loss = 0
         start_time = time.time()
 
-        random.shuffle(im_list)
+        random.shuffle(train_im_list)
         # print(random_im_list)
-        for im in im_list:
-            name, _ = os.path.splitext(im)
+        for im in train_im_list:
+            root, file_name = os.path.split(im)
+            root, _ = os.path.split(root)
+            name, _ = os.path.splitext(file_name)
             gt_name = 'gt_' + name + '.txt'
 
-            gt_path = os.path.join(gt_root, gt_name)
+            gt_path = os.path.join(root, "train_gt", gt_name)
 
             if not os.path.exists(gt_path):
                 print('Ground truth file of image {0} not exists.'.format(im))
@@ -134,13 +169,10 @@ if __name__ == '__main__':
 
             gt_txt = lib.dataset_handler.read_gt_file(gt_path)
             #print("processing image %s" % os.path.join(img_root1, im))
-            img = cv2.imread(os.path.join(img_root, im))
+            img = cv2.imread(im)
             if img is None:
                 iteration += 1
                 continue
-
-            if display_img_name:
-                print(os.path.join(img_root, im))
 
             img, gt_txt = lib.dataset_handler.scale_img(img, gt_txt)
             tensor_img = img[np.newaxis, :, :, :]
@@ -172,7 +204,7 @@ if __name__ == '__main__':
                     vertical_reg += vertical_reg1
                     side_refinement_reg += side_refinement_reg1
             except:
-                print("warning: img %s raise error!")
+                print("warning: img %s raise error!" % im)
                 iteration += 1
                 continue
 
@@ -180,7 +212,7 @@ if __name__ == '__main__':
                 iteration += 1
                 continue
 
-            cv2.imwrite(os.path.join(DRAW_PREFIX, im), visual_img)
+            cv2.imwrite(os.path.join(DRAW_PREFIX, file_name), visual_img)
             optimizer.zero_grad()
             loss, cls_loss, v_reg_loss, o_reg_loss = criterion(score, vertical_pred, side_refinement, positive,
                                                                negative, vertical_reg, side_refinement_reg)
@@ -198,7 +230,7 @@ if __name__ == '__main__':
                 total_time = end_time - start_time
                 print('Epoch: {2}/{3}, Iteration: {0}/{1}, loss: {4}, cls_loss: {5}, v_reg_loss: {6}, o_reg_loss: {7}, {8}'.
                       format(iteration, total_iter, i, epoch, total_loss / display_iter, total_cls_loss / display_iter,
-                             total_v_reg_loss / display_iter, total_o_reg_loss / display_iter, os.path.join(img_root, im)))
+                             total_v_reg_loss / display_iter, total_o_reg_loss / display_iter, im))
 
                 logger.info('Epoch: {2}/{3}, Iteration: {0}/{1}'.format(iteration, total_iter, i, epoch))
                 logger.info('loss: {0}'.format(total_loss / display_iter))
@@ -217,7 +249,7 @@ if __name__ == '__main__':
             if iteration % val_iter == 0:
                 net.eval()
                 logger.info('Start evaluate at {0} epoch {1} iteration.'.format(i, iteration))
-                val_loss = evaluate.val(net, criterion, val_batch_size, using_cuda, logger)
+                val_loss = evaluate.val(net, criterion, val_batch_size, using_cuda, logger, val_im_list)
                 logger.info('End evaluate.')
                 net.train()
                 start_time = time.time()
@@ -225,9 +257,9 @@ if __name__ == '__main__':
 
             if iteration % save_iter == 0:
                 print('Model saved at ./model/ctpn-{0}-{1}.model'.format(i, iteration))
-                torch.save(net.state_dict(), './model/ctpn-mlt-{0}-{1}.model'.format(i, iteration))
+                torch.save(net.state_dict(), './model/ctpn-msra_ali-{0}-{1}.model'.format(i, iteration))
 
         print('Model saved at ./model/ctpn-{0}-end.model'.format(i))
-        torch.save(net.state_dict(), './model/ctpn-mlt-{0}-end.model'.format(i))
+        torch.save(net.state_dict(), './model/ctpn-msra_ali-{0}-end.model'.format(i))
 
     draw_loss_plot(train_loss_list, test_loss_list)

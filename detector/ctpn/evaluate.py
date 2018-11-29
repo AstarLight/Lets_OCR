@@ -11,12 +11,7 @@ import random
 import copy
 
 
-def val(net, criterion, batch_num, using_cuda, logger):
-    #img_root = '/home/ljs/OCR_dataset/MLT/val_img'
-    #gt_root = '/home/ljs/OCR_dataset/MLT/val_loc_gt'
-    img_root = '/home/ljs/ctpn_torch/dataset/OCR_dataset/ctpn/test_im'
-    gt_root = '/home/ljs/ctpn_torch/dataset/OCR_dataset/ctpn/test_gt'
-    img_list = os.listdir(img_root)
+def val(net, criterion, batch_num, using_cuda, logger, img_list):
     random_list = random.sample(img_list, batch_num)
     total_loss = 0
     total_cls_loss = 0
@@ -24,15 +19,17 @@ def val(net, criterion, batch_num, using_cuda, logger):
     total_o_reg_loss = 0
     start_time = time.time()
     for im in random_list:
-        name, _ = os.path.splitext(im)
+        root, file_name = os.path.split(im)
+        root, _ = os.path.split(root)
+        name, _ = os.path.splitext(file_name)
         gt_name = 'gt_' + name + '.txt'
-        gt_path = os.path.join(gt_root, gt_name)
+        gt_path = os.path.join(root, "test_gt", gt_name)
         if not os.path.exists(gt_path):
-            print('Ground truth file of image {0} not exists.'.format(im))
+            print('Ground truth file of image {0} not exists.'.format(gt_path))
             continue
 
         gt_txt = lib.dataset_handler.read_gt_file(gt_path, have_BOM=True)
-        img = cv2.imread(os.path.join(img_root, im))
+        img = cv2.imread(im)
         if img is None:
             batch_num -= 1
             continue
@@ -62,7 +59,7 @@ def val(net, criterion, batch_num, using_cuda, logger):
                 vertical_reg += vertical_reg1
                 side_refinement_reg += side_refinement_reg1
         except:
-            print("warning: img %s raise error!" % os.path.join(img_root, im))
+            print("warning: img %s raise error!" % im)
             batch_num -= 1
             continue
 
