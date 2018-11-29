@@ -16,8 +16,7 @@ import sys
 np.set_printoptions(threshold='nan')
 anchor_height = [11, 16, 22, 32, 46, 66, 94, 134, 191, 273]
 
-IMG_ROOT = "/home/ljs/ctpn_torch/dataset/OCR_dataset/ctpn/test_im"
-GT_ROOT = "/home/ljs/ctpn_torch/dataset/OCR_dataset/ctpn/test_gt"
+IMG_ROOT = "/home/ljs/OCR_dataset/OCR_TEST"
 TEST_RESULT = './test_result'
 
 
@@ -176,17 +175,17 @@ def neighbour_connector(text_proposals, im_size):
     return successions
 
 
-def gen_test_images(gt_root, img_root, test_num=10):
+def gen_test_images(img_root, test_num=10):
     img_list = os.listdir(img_root)
-    #random_list = random.sample(img_list, test_num)
-    random_list = img_list
+    if test_num > 0:
+        random_list = random.sample(img_list, test_num)
+    else:
+        random_list = img_list
     test_pair = []
     for im in random_list:
         name, _ = os.path.splitext(im)
-        gt_name = 'gt_' + name + '.txt'
-        gt_path = os.path.join(gt_root, gt_name)
         im_path = os.path.join(img_root, im)
-        test_pair.append((im_path, gt_path))
+        test_pair.append(im_path)
     return test_pair
 
 
@@ -332,7 +331,7 @@ def infer_one(im_name, net):
 
 
 def random_test(net):
-    test_pair = gen_test_images(GT_ROOT, IMG_ROOT, 50)
+    test_pair = gen_test_images(IMG_ROOT, 0)
     print(test_pair)
     if os.path.exists(TEST_RESULT):
         shutil.rmtree(TEST_RESULT)
@@ -340,9 +339,8 @@ def random_test(net):
     os.mkdir(TEST_RESULT)
 
     for t in test_pair:
-        im = cv2.imread(t[0])
-        gt = lib.dataset_handler.read_gt_file(t[1])
-        im, gt = lib.dataset_handler.scale_img(im, gt)
+        im = cv2.imread(t)
+        im = lib.dataset_handler.scale_img_only(im)
         img = copy.deepcopy(im)
         img = img.transpose(2, 0, 1)
         img = img[np.newaxis, :, :, :]
@@ -361,8 +359,6 @@ def random_test(net):
             for_nms.append([pt[0], pt[1], pt[2], pt[3], box[3], box[0], box[1], box[2]])
         for_nms = np.array(for_nms, dtype=np.float32)
         nms_result = lib.nms.cpu_nms(for_nms, 0.3)
-
-
 
         out_nms = []
         for i in nms_result:
@@ -389,7 +385,7 @@ def random_test(net):
             box = np.array(box)
             print(box)
             lib.draw_image.draw_ploy_4pt(im, box[0:8], thickness=4)
-        cv2.imwrite(os.path.join(TEST_RESULT, os.path.basename(t[0])), im)
+        cv2.imwrite(os.path.join(TEST_RESULT, os.path.basename(t)), im)
 """
         for i in nms_result:
             vc = v[int(for_nms[i, 7]), 0, int(for_nms[i, 5]), int(for_nms[i, 6])]
