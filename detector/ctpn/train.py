@@ -262,4 +262,4 @@ if __name__ == '__main__':
         print('Model saved at ./model/ctpn-{0}-end.model'.format(i))
         torch.save(net.state_dict(), './model/ctpn-msra_ali-{0}-end.model'.format(i))
 
-    draw_loss_plot(train_loss_list, test_loss_list)
+        draw_loss_plot(train_loss_list, test_loss_list)

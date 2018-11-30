@@ -11,7 +11,7 @@ def rawGT_to_locGT(in_path, out_path):
     files_list = os.listdir(in_path)
     for name in files_list:
         in_file = os.path.join(in_path, name)
-        out_file = os.path.join(out_path, name)
+        out_file = os.path.join(out_path, 'gt_'+name)
         f1 = open(in_file, 'r')
         #f1 = codecs.open(in_file, 'r', 'utf-8-sig')
         lines = f1.readlines()
@@ -33,5 +33,5 @@ def rawGT_to_locGT(in_path, out_path):
         f2.close()
 
 
-rawGT_to_locGT('/home/ljs/OCR_dataset/MLT/train_gt', '/home/ljs/OCR_dataset/MLT/train_loc_gt')
-rawGT_to_locGT('/home/ljs/OCR_dataset/MLT/val_gt', '/home/ljs/OCR_dataset/MLT/val_loc_gt')
+rawGT_to_locGT('/home/ljs/OCR_dataset/ali_ocr/train_1000/txt_1000', '/home/ljs/data_ready/ali_icpr/gt_1000')
+#rawGT_to_locGT('/home/ljs/OCR_dataset/MLT/val_gt', '/home/ljs/OCR_dataset/MLT/val_loc_gt')

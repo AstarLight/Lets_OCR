@@ -13,11 +13,15 @@ import math
 import random
 import shutil
 import sys
-np.set_printoptions(threshold='nan')
+
 anchor_height = [11, 16, 22, 32, 46, 66, 94, 134, 191, 273]
 
 IMG_ROOT = "/home/ljs/OCR_dataset/OCR_TEST"
 TEST_RESULT = './test_result'
+THRESH_HOLD = 0.7
+NMS_THRESH = 0.3
+NEIGHBOURS_MIN_DIST = 50
+MODEL = './model/ctpn-msra_ali-9-end.model'
 
 
 def threshold(coords, min_, max_):
@@ -140,39 +144,7 @@ def meet_v_iou(y1, y2, h1, h2):
     def size_similarity(h1, h2):
         return min(h1, h2)/max(h1, h2)
 
-    return overlaps_v(y1, y2, h1, h2) >= 0.6 and \
-           size_similarity(h1, h2) >= 0.6
-
-
-def get_successions(index, im_size, text_proposals, boxes_table):
-        box=text_proposals[index]
-        heights = text_proposals[:, 3] - text_proposals[:, 1] + 1
-        results=[]
-        # find horizon
-        for left in range(int(box[0])+1, min(int(box[0])+30+1, im_size[1])):
-            adj_box_indices=boxes_table[left]  # vertical adjacent anchors, find vertical
-            for adj_box_index in adj_box_indices:
-                if meet_v_iou(adj_box_index, index, text_proposals, heights):
-                    #print(text_proposals[adj_box_index])
-                    results.append(adj_box_index)
-            if len(results)!=0:
-                return results
-        return results
-
-
-def neighbour_connector(text_proposals, im_size):
-    print(text_proposals)
-    boxes_table = [[] for _ in range(im_size[1])]
-    for index, box in enumerate(text_proposals):
-        boxes_table[int(box[0])].append(index)
-    print(boxes_table)
-    successions = []
-    for index, box in enumerate(text_proposals):
-        s = get_successions(index, im_size, text_proposals, boxes_table)
-        if len(s) == 0:
-            continue
-        successions.append(s)
-    return successions
+    return overlaps_v(y1, y2, h1, h2) >= 0.6 and size_similarity(h1, h2) >= 0.6
 
 
 def gen_test_images(img_root, test_num=10):
@@ -199,49 +171,18 @@ def get_anchor_h(anchor, v):
     return h
 
 
-def get_text_anchors(v, anchors=[]):
-    anchor_graph = np.zeros(len(anchors), np.bool)
-    texts = []
-    for i, anchor in enumerate(anchors):
-        one_text = []
-        if not anchor_graph[i]:
-            one_text.append(anchor)
-            anchor_graph[i] = True
-            center_x1 = (anchor[2] + anchor[0])/2
-            center_y1 = (anchor[3] + anchor[1]) / 2
-            h1 = get_anchor_h(anchor, v)
-            for j in range(i+1, len(anchors)):
-                if not anchor_graph[j]:
-                    center_x2 = (anchors[j][2] + anchors[j][0])/2
-                    center_y2 = (anchors[j][3] + anchors[j][1]) / 2
-                    h2 = get_anchor_h(anchors[j], v)
-                    print("h1 is %s, h2 is %s" % (h1,h2))
-                    if abs(center_x1-center_x2) < 50 and \
-                            meet_v_iou(max(anchor[1], anchors[j][1]), min(anchor[3], anchors[j][3]), h1, h2):   # less than 50 pixel between each anchor
-                        one_text.append(anchors[j])
-                        #print(anchors[j])
-                        anchor_graph[j] = True
-        if len(one_text) != 0:
-            texts.append(one_text)
-            print(one_text)
-    return texts
-
-
-def get_ssss(v, anchors=[]):
+def get_successions(v, anchors=[]):
     texts = []
     for i, anchor in enumerate(anchors):
         neighbours = []
         neighbours.append(i)
         center_x1 = (anchor[2] + anchor[0]) / 2
-        center_y1 = (anchor[3] + anchor[1]) / 2
         h1 = get_anchor_h(anchor, v)
         # find i's neighbour
         for j in range(i + 1, len(anchors)):
             center_x2 = (anchors[j][2] + anchors[j][0]) / 2
-            center_y2 = (anchors[j][3] + anchors[j][1]) / 2
             h2 = get_anchor_h(anchors[j], v)
-            print("h1 is %s, h2 is %s" % (h1, h2))
-            if abs(center_x1 - center_x2) < 50 and \
+            if abs(center_x1 - center_x2) < NEIGHBOURS_MIN_DIST and \
                     meet_v_iou(max(anchor[1], anchors[j][1]), min(anchor[3], anchors[j][3]), h1, h2):  # less than 50 pixel between each anchor
                 neighbours.append(j)
 
@@ -267,7 +208,7 @@ def get_ssss(v, anchors=[]):
                     texts[j] = []
 
     result = []
-    print(texts)
+    #print(texts)
     for text in texts:
         if len(text) < 2:
             continue
@@ -290,7 +231,7 @@ def infer_one(im_name, net):
     for i in range(score.shape[0]):
         for j in range(score.shape[1]):
             for k in range(score.shape[2]):
-                if score[i, j, k, 1] > 0.7:
+                if score[i, j, k, 1] > THRESH_HOLD:
                     result.append((j, k, i, float(score[i, j, k, 1].detach().numpy())))
 
     for_nms = []
@@ -298,18 +239,15 @@ def infer_one(im_name, net):
         pt = lib.utils.trans_to_2pt(box[1], box[0] * 16 + 7.5, anchor_height[box[2]])
         for_nms.append([pt[0], pt[1], pt[2], pt[3], box[3], box[0], box[1], box[2]])
     for_nms = np.array(for_nms, dtype=np.float32)
-    nms_result = lib.nms.cpu_nms(for_nms, 0.3)
+    nms_result = lib.nms.cpu_nms(for_nms, NMS_THRESH)
 
     out_nms = []
     for i in nms_result:
         out_nms.append(for_nms[i, 0:8])
 
-    #print(out_nms)
-    print(type(out_nms))
-    connect = get_ssss(v, out_nms)
-    print("size of texts %s" % len(connect))
+    connect = get_successions(v, out_nms)
     texts = get_text_lines(connect, im.shape)
-    #print(texts)
+
     for box in texts:
         box = np.array(box)
         print(box)
@@ -350,7 +288,7 @@ def random_test(net):
         for i in range(score.shape[0]):
             for j in range(score.shape[1]):
                 for k in range(score.shape[2]):
-                    if score[i, j, k, 1] > 0.7:
+                    if score[i, j, k, 1] > THRESH_HOLD:
                         result.append((j, k, i, float(score[i, j, k, 1].detach().numpy())))
 
         for_nms = []
@@ -358,18 +296,14 @@ def random_test(net):
             pt = lib.utils.trans_to_2pt(box[1], box[0] * 16 + 7.5, anchor_height[box[2]])
             for_nms.append([pt[0], pt[1], pt[2], pt[3], box[3], box[0], box[1], box[2]])
         for_nms = np.array(for_nms, dtype=np.float32)
-        nms_result = lib.nms.cpu_nms(for_nms, 0.3)
+        nms_result = lib.nms.cpu_nms(for_nms, NMS_THRESH)
 
         out_nms = []
         for i in nms_result:
             out_nms.append(for_nms[i, 0:8])
 
-        # print(out_nms)
-        #print(type(out_nms))
-        connect = get_ssss(v, out_nms)
-        #print("size of texts %s" % len(connect))
+        connect = get_successions(v, out_nms)
         texts = get_text_lines(connect, im.shape)
-        # print(texts)
 
         for i in nms_result:
             vc = v[int(for_nms[i, 7]), 0, int(for_nms[i, 5]), int(for_nms[i, 6])]
@@ -409,7 +343,7 @@ def random_test(net):
 
 if __name__ == '__main__':
     net = Net.CTPN()
-    net.load_state_dict(torch.load('./model/ctpn-29-end.model'))
+    net.load_state_dict(torch.load(MODEL))
     print(net)
     net.eval()
 
