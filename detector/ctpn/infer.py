@@ -16,11 +16,12 @@ import sys
 
 anchor_height = [11, 16, 22, 32, 46, 66, 94, 134, 191, 273]
 
-IMG_ROOT = "/home/ljs/OCR_dataset/OCR_TEST"
+IMG_ROOT = "../common/OCR_TEST"
 TEST_RESULT = './test_result'
 THRESH_HOLD = 0.7
 NMS_THRESH = 0.3
 NEIGHBOURS_MIN_DIST = 50
+MIN_ANCHOR_BATCH = 2
 MODEL = './model/ctpn-msra_ali-9-end.model'
 
 
@@ -208,7 +209,7 @@ def get_successions(v, anchors=[]):
     result = []
     print(texts)
     for text in texts:
-        if len(text) < 2:
+        if len(text) < MIN_ANCHOR_BATCH:
             continue
         local = []
         for j in text:
