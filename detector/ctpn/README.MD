@@ -8,7 +8,7 @@ this greatly simplified the coding complexity and it makes easier to understand 
 2. ```make```
 
 ## Train
-1. Download this project, and prepare the OCR dataset(MSRA_TD500 & tianchi_icpr)
+1. Download this project, and prepare the OCR dataset([MSRA_TD500 & tianchi_icpr](https://pan.baidu.com/s/1kHTI5fg_oTOlQIVjOpFC8A))
 2. ```python train.py```，then training will be setup. Before that, you can modify the file ```config```to adjust some parameters.
 3. The final training model will be save in ```model```directory.
 
