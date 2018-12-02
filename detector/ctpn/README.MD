@@ -1,4 +1,4 @@
-# Lets_OCR
+# CTPN_Pytorch
 
 A simple and light-weight implementation of CTPN, a classical text detection network in OCR area. This project is built in Pytorch, 
 this greatly simplified the coding complexity and it makes easier to understand the CTPN inner mechanism.
