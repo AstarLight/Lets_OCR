@@ -179,7 +179,9 @@ def get_successions(v, anchors=[]):
         center_x1 = (anchor[2] + anchor[0]) / 2
         h1 = get_anchor_h(anchor, v)
         # find i's neighbour
-        for j in range(i + 1, len(anchors)):
+        for j in range(0, len(anchors)):
+            if j == i:
+                continue
             center_x2 = (anchors[j][2] + anchors[j][0]) / 2
             h2 = get_anchor_h(anchors[j], v)
             if abs(center_x1 - center_x2) < NEIGHBOURS_MIN_DIST and \
@@ -196,19 +198,23 @@ def get_successions(v, anchors=[]):
         if len(neighbours) != 0:
             texts.append(neighbours)
 
-    # ok, we combine again.
-    for i, line in enumerate(texts):
-        if len(line) == 0:
-            continue
-        for index in line:
-            for j in range(i+1, len(texts)):
-                if index in texts[j]:
-                    texts[i] += texts[j]
-                    texts[i] = list(set(texts[i]))
-                    texts[j] = []
+    need_merge = True
+    while need_merge:
+        need_merge = False
+        # ok, we combine again.
+        for i, line in enumerate(texts):
+            if len(line) == 0:
+                continue
+            for index in line:
+                for j in range(i+1, len(texts)):
+                    if index in texts[j]:
+                        texts[i] += texts[j]
+                        texts[i] = list(set(texts[i]))
+                        texts[j] = []
+                        need_merge = True
 
     result = []
-    #print(texts)
+    print(texts)
     for text in texts:
         if len(text) < 2:
             continue
@@ -251,7 +257,7 @@ def infer_one(im_name, net):
     for box in texts:
         box = np.array(box)
         print(box)
-        lib.draw_image.draw_ploy_4pt(im, box[0:8])
+        lib.draw_image.draw_ploy_4pt(im, box[0:8], thickness=2)
 
     _, basename = os.path.split(im_name)
     cv2.imwrite('./infer_'+basename, im)
@@ -318,7 +324,7 @@ def random_test(net):
         for box in texts:
             box = np.array(box)
             print(box)
-            lib.draw_image.draw_ploy_4pt(im, box[0:8], thickness=4)
+            lib.draw_image.draw_ploy_4pt(im, box[0:8], thickness=2)
         cv2.imwrite(os.path.join(TEST_RESULT, os.path.basename(t)), im)
 """
         for i in nms_result:
