@@ -187,14 +187,6 @@ def get_successions(v, anchors=[]):
             if abs(center_x1 - center_x2) < NEIGHBOURS_MIN_DIST and \
                     meet_v_iou(max(anchor[1], anchors[j][1]), min(anchor[3], anchors[j][3]), h1, h2):  # less than 50 pixel between each anchor
                 neighbours.append(j)
-
-        # now we get i's neighbours, then we find if i also locate in somewhere
-        for k, line in enumerate(texts):
-            for index in line:
-                if index == i:
-                    texts[k] += neighbours
-                    texts[k] = list(set(texts[k]))
-                    neighbours = []
         if len(neighbours) != 0:
             texts.append(neighbours)
 
