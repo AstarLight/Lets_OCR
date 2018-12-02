@@ -16,7 +16,7 @@ import sys
 
 anchor_height = [11, 16, 22, 32, 46, 66, 94, 134, 191, 273]
 
-IMG_ROOT = "/home/ljs/OCR_dataset/OCR_TEST"
+IMG_ROOT = "../common/OCR_TEST"
 TEST_RESULT = './test_result'
 THRESH_HOLD = 0.7
 NMS_THRESH = 0.3
