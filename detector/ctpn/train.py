@@ -22,6 +22,7 @@ DRAW_PREFIX = './anchor_draw'
 MSRA = '/home/ljs/data_ready/MSRA_TD500'
 ALI = '/home/ljs/data_ready/ali_icpr'
 DATASET_LIST = [MSRA, ALI]
+MODEL_SAVE_PATH = '/model'
 
 
 def loop_files(path):
@@ -112,6 +113,9 @@ if __name__ == '__main__':
         'cnn.VGG_16.convolution1_2.weight',
         'cnn.VGG_16.convolution1_2.bias'
     ]
+
+    if not os.path.exists(MODEL_SAVE_PATH):
+        os.mkdir(MODEL_SAVE_PATH)
 
     net = Net.CTPN()
     for name, value in net.named_parameters():
@@ -257,9 +261,9 @@ if __name__ == '__main__':
 
             if iteration % save_iter == 0:
                 print('Model saved at ./model/ctpn-{0}-{1}.model'.format(i, iteration))
-                torch.save(net.state_dict(), './model/ctpn-msra_ali-{0}-{1}.model'.format(i, iteration))
+                torch.save(net.state_dict(), os.path.join(MODEL_SAVE_PATH, 'ctpn-msra_ali-{0}-{1}.model'.format(i, iteration)))
 
         print('Model saved at ./model/ctpn-{0}-end.model'.format(i))
-        torch.save(net.state_dict(), './model/ctpn-msra_ali-{0}-end.model'.format(i))
+        torch.save(net.state_dict(), os.path.join(MODEL_SAVE_PATH, 'ctpn-msra_ali-{0}-end.model'.format(i)))
 
-    draw_loss_plot(train_loss_list, test_loss_list)
+        draw_loss_plot(train_loss_list, test_loss_list)
