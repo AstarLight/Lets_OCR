@@ -11,6 +11,13 @@ from PIL import ImageDraw
 import random
 
 
+def read_sentence_dict(dict_path):
+    sentences = []
+    with open(dict_path, "r") as f:
+        sentences = f.readlines()
+    return sentences
+
+
 class DocumentGenerator(object):
     def __init__(self, width, height, underline=False):
         self.width = width
@@ -44,16 +51,19 @@ class DocumentGenerator(object):
         draw = ImageDraw.Draw(img)
         font = ImageFont.truetype(font_path, self.char_size)
         random.shuffle(sentence_list)
-        sentence_num_in_one_image = (self.height + self.bank_line_width) / self.char_size - self.bank_line
+        sentence_num_in_one_image = self.height / (self.bank_line_width + self.char_size) - self.bank_line
+
         for i, sentence in enumerate(sentence_list):
+            sentence.strip('\r\n')
+            print(sentence)
             if i % sentence_num_in_one_image == 0:
-                new_image_list.append(draw)
-                img = Image.new("RGB", (self.width, self.height), "black")
+                new_image_list.append(img.copy())
+                img = Image.new("RGB", (self.width, self.height), "white")
                 draw = ImageDraw.Draw(img)
                 sentence_loc.append(local_stentence_loc)
                 local_stentence_loc = []
             x = 50
-            y = 50*(i % sentence_num_in_one_image + 1)+self.bank_line_width
+            y = 50 + self.char_size*(i % sentence_num_in_one_image + 1)+self.bank_line_width
             w = self.char_size * len(sentence)
             h = self.char_size
             draw.text((x, y), sentence, (0, 0, 0), font=font)
@@ -74,10 +84,10 @@ def args_parse():
                         default=0.2, required=False,
                         help='test dataset size')
     parser.add_argument('--width', dest='width',
-                        default=None, required=True,
+                        default=1400, required=True,
                         help='width')
     parser.add_argument('--height', dest='height',
-                        default=None, required=True,
+                        default=2000, required=True,
                         help='height')
     parser.add_argument('--no_crop', dest='no_crop',
                         default=True, required=False,
@@ -97,7 +107,9 @@ def args_parse():
     args = vars(parser.parse_args())
     return args
 
-
+'''
+python gen_printed_char.py --out_dir ./dataset --font_dir /home/ljs/CPS-OCR/ocr/chinese_fonts  --width 1400 --height 2000 
+'''
 if __name__ == "__main__":
     options = args_parse()
     out_dir = os.path.expanduser(options['out_dir'])
@@ -121,17 +133,18 @@ if __name__ == "__main__":
         shutil.rmtree(train_images_dir)
     os.makedirs(train_images_dir)
 
-    if os.path.isdir(test_images_dir):
-        shutil.rmtree(test_images_dir)
-    os.makedirs(test_images_dir)
-
+    # 对于每类字体进行小批量测试
     verified_font_paths = []
+    ## search for file fonts
+    for font_name in os.listdir(font_dir):
+        path_font_file = os.path.join(font_dir, font_name)
+        verified_font_paths.append(path_font_file)
 
     if rotate < 0:
         roate = - rotate
 
+    all_rotate_angles = []
     if rotate > 0 and rotate <= 45:
-        all_rotate_angles = []
         for i in range(0, rotate + 1, rotate_step):
             all_rotate_angles.append(i)
         for i in range(-rotate, 0, rotate_step):
@@ -140,25 +153,35 @@ if __name__ == "__main__":
 
     dg = DocumentGenerator(width, height, underline=False)
 
-    sentence_list = []
-    label_list = []
-    image_list = []
+    sentence_list = read_sentence_dict('./dict.txt')
+    print(sentence_list)
+    total_images = []
+    total_labels = []
     # start document files create
     for i, verified_font_path in enumerate(verified_font_paths):  # 内层循环是字体
+        label_list = []
+        image_list = []
         if rotate == 0:
             image_list, label_list = dg.build_basic_document(verified_font_path, sentence_list)
+            total_images += image_list
+            total_labels += label_list
         else:
             for k in all_rotate_angles:
                 image_list, label_list = dg.build_basic_document(verified_font_path, sentence_list, rotate=k)
+                total_images += image_list
+                total_labels += label_list
 
-    for i, image in enumerate(image_list):
+    print("We have generated %d images and %d labels." % (len(total_images), len(total_labels)))
+
+    for i, image in enumerate(total_images):
         image_name = "%d.png" % i
         image_path = os.path.join(train_images_dir, image_name)
         image.save(image_path)
         label_name = "%d.txt" % i
         label_path = os.path.join(train_images_dir, label_name)
         with open(label_path, "w+") as f:
-            for line in label_list[i]:
-                f.write(str(line))
+            for line in total_labels[i]:
+                loc = "%d,%d,%d,%d,%s" % (line[0], line[1]. line[2]. line[3], line[4])
+                f.write(loc)
                 f.write('\n')
 
