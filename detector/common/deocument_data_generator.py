@@ -9,6 +9,30 @@ from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 import random
+from copy import deepcopy
+import cv2
+import numpy as np
+
+
+def len_of_sentence(sentence):
+    count = 0
+    digits_letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+    for c in sentence:
+        if c in digits_letters:
+            count += 1
+    return len(sentence) - int(count / 2)
+
+def draw_labels(img, name, labels=[]):
+    img = np.array(img)
+    for label in labels:
+        draw_ploy_4pt(img, label)
+    cv2.imwrite(name, img)
+
+
+def draw_ploy_4pt(img, pt, color=(0, 255, 0), thickness=2):
+    pts = np.array([[pt[0], pt[1]], [pt[2], pt[3]], [pt[4], pt[5]], [pt[6], pt[7]]], np.int32)
+    pts = pts.reshape((-1, 1, 2))
+    return cv2.polylines(img, [pts], True, color, thickness)
 
 
 def read_sentence_dict(dict_path):
@@ -24,8 +48,9 @@ class DocumentGenerator(object):
         self.height = height
         self.underline = underline
         self.char_size = 30
-        self.bank_line = 5
-        self.bank_line_width = 15
+        self.bank_line = 2
+        self.bank_line_width = 40
+        self.offset = 5
 
     def rotate(self):
         pass
@@ -52,22 +77,40 @@ class DocumentGenerator(object):
         font = ImageFont.truetype(font_path, self.char_size)
         random.shuffle(sentence_list)
         sentence_num_in_one_image = self.height / (self.bank_line_width + self.char_size) - self.bank_line
-
+        print("sentence_num_in_one_image = %d" % sentence_num_in_one_image)
         for i, sentence in enumerate(sentence_list):
-            sentence.strip('\r\n')
-            print(sentence)
-            if i % sentence_num_in_one_image == 0:
-                new_image_list.append(img.copy())
+            a = int((i+1) % sentence_num_in_one_image)
+            #print(a)
+            sentence.strip('\n')
+            #print(sentence)
+
+            x = 50
+            y = 50 + (self.char_size + self.bank_line_width) * int(i % sentence_num_in_one_image)
+            w = self.char_size * len_of_sentence(sentence)
+            h = self.char_size
+            x1 = x - self.offset
+            y1 = y - self.offset
+            x2 = x + w + self.offset
+            y2 = y - self.offset
+            x3 = x + w + self.offset
+            y3 = y + h + self.offset
+            x4 = x - self.offset
+            y4 = y + h + self.offset
+            draw.text((x, y), sentence, (0, 0, 0), font=font)
+            #print("lable is %d, %d, %d, %d, %s" % (x,y,w,h,sentence))
+            local_stentence_loc.append((x1,y1,x2,y2,x3,y3,x4,y4,sentence))
+            #print(local_stentence_loc)
+
+            if a == 0:
+                new_image_list.append(deepcopy(img))
                 img = Image.new("RGB", (self.width, self.height), "white")
                 draw = ImageDraw.Draw(img)
-                sentence_loc.append(local_stentence_loc)
+                loc_save = deepcopy(local_stentence_loc)
+                sentence_loc.append(loc_save)
+                #print(loc_save)
                 local_stentence_loc = []
-            x = 50
-            y = 50 + self.char_size*(i % sentence_num_in_one_image + 1)+self.bank_line_width
-            w = self.char_size * len(sentence)
-            h = self.char_size
-            draw.text((x, y), sentence, (0, 0, 0), font=font)
-            local_stentence_loc.append((x,y,w,h,sentence))
+
+        #print(sentence_loc)
         return new_image_list, sentence_loc
 
 
@@ -84,7 +127,7 @@ def args_parse():
                         default=0.2, required=False,
                         help='test dataset size')
     parser.add_argument('--width', dest='width',
-                        default=1400, required=True,
+                        default=2000, required=True,
                         help='width')
     parser.add_argument('--height', dest='height',
                         default=2000, required=True,
@@ -154,6 +197,7 @@ if __name__ == "__main__":
     dg = DocumentGenerator(width, height, underline=False)
 
     sentence_list = read_sentence_dict('./dict.txt')
+    print("the len of dict is %d" % len(sentence_list))
     print(sentence_list)
     total_images = []
     total_labels = []
@@ -173,6 +217,8 @@ if __name__ == "__main__":
 
     print("We have generated %d images and %d labels." % (len(total_images), len(total_labels)))
 
+    #print(total_labels)
+
     for i, image in enumerate(total_images):
         image_name = "%d.png" % i
         image_path = os.path.join(train_images_dir, image_name)
@@ -181,7 +227,11 @@ if __name__ == "__main__":
         label_path = os.path.join(train_images_dir, label_name)
         with open(label_path, "w+") as f:
             for line in total_labels[i]:
-                loc = "%d,%d,%d,%d,%s" % (line[0], line[1]. line[2]. line[3], line[4])
+                #print(line)
+                loc = "%d,%d,%d,%d,%s" % (line[0], line[1], line[2], line[3], line[4])
                 f.write(loc)
                 f.write('\n')
+        visual_name = "visual_" + image_name
+        visual_path = os.path.join(train_images_dir, visual_name)
+        draw_labels(image, visual_path, total_labels[i])
 
