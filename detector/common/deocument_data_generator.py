@@ -16,7 +16,7 @@ import numpy as np
 
 def len_of_sentence(sentence):
     count = 0
-    digits_letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+    digits_letters = ' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,'
     for c in sentence:
         if c in digits_letters:
             count += 1
@@ -40,6 +40,14 @@ def read_sentence_dict(dict_path):
     with open(dict_path, "r") as f:
         sentences = f.readlines()
     return sentences
+
+
+def randomX(w, image_width):
+    margin = 20
+    image_width -= margin
+    maxX = image_width - w
+    newX = random.randint(margin, maxX)
+    return newX
 
 
 class DocumentGenerator(object):
@@ -67,7 +75,7 @@ class DocumentGenerator(object):
     def put_sentence(self):
         pass
 
-    def build_basic_document(self, font_path, sentence_list=[], rotate=0):
+    def build_basic_document(self, font_path, sentence_list=[], rotate=0, undeline=False):
         # 黑色背景
         new_image_list = []
         sentence_loc = []  # [[x,y,w,h,'ssss'], [x,y,w,h, "aaaa"]]
@@ -84,19 +92,21 @@ class DocumentGenerator(object):
             sentence.strip('\n')
             #print(sentence)
 
-            x = 50
             y = 50 + (self.char_size + self.bank_line_width) * int(i % sentence_num_in_one_image)
             w = self.char_size * len_of_sentence(sentence)
             h = self.char_size
+            x = randomX(w, self.width)
             x1 = x - self.offset
             y1 = y - self.offset
-            x2 = x + w + self.offset
+            x2 = x + w
             y2 = y - self.offset
-            x3 = x + w + self.offset
-            y3 = y + h + self.offset
+            x3 = x + w
+            y3 = y + h + self.offset * 2
             x4 = x - self.offset
-            y4 = y + h + self.offset
+            y4 = y + h + self.offset * 2
             draw.text((x, y), sentence, (0, 0, 0), font=font)
+            if undeline:
+                draw.line(((x4,y4+3),(x3,y3+3)), fill=(0,0,0))
             #print("lable is %d, %d, %d, %d, %s" % (x,y,w,h,sentence))
             local_stentence_loc.append((x1,y1,x2,y2,x3,y3,x4,y4,sentence))
             #print(local_stentence_loc)
@@ -209,6 +219,9 @@ if __name__ == "__main__":
             image_list, label_list = dg.build_basic_document(verified_font_path, sentence_list)
             total_images += image_list
             total_labels += label_list
+            image_list, label_list = dg.build_basic_document(verified_font_path, sentence_list, undeline=True)
+            total_images += image_list
+            total_labels += label_list
         else:
             for k in all_rotate_angles:
                 image_list, label_list = dg.build_basic_document(verified_font_path, sentence_list, rotate=k)
@@ -228,7 +241,7 @@ if __name__ == "__main__":
         with open(label_path, "w+") as f:
             for line in total_labels[i]:
                 #print(line)
-                loc = "%d,%d,%d,%d,%s" % (line[0], line[1], line[2], line[3], line[4])
+                loc = "%d,%d,%d,%d,%d,%d,%d,%d,%s" % (line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7], line[8])
                 f.write(loc)
                 f.write('\n')
         visual_name = "visual_" + image_name
