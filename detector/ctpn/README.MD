@@ -15,7 +15,7 @@ this greatly simplified the coding complexity and it makes easier to understand 
 
 
 ## Inference
-I propose two modes to inference. You can modify the infer mode in file ```test.sh```. We can use command ```sh test.sh```to start text detection.
+I propose two modes to inference. You can modify the infer mode in file ```test.sh```. We can use command ```sh test.sh```to start text detection. You can download my trained model [here](https://pan.baidu.com/s/17rS1U0045WPHJotQNx7ncw).
 1. "python infer.py random" means taht we will inference a batch of pictures in a specific directory path offered in file ```infer.py```. 
 2. "python infer.py your_pic_path" means that we will only infer one picture according to your picture path.
 
