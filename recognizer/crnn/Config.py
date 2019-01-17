@@ -1,0 +1,17 @@
+raw_folder = ''
+train_data = './train'
+test_data = './test'
+random_seed = 1111
+using_cuda = True
+model_dir = './model'
+data_worker = 4
+batch_size = 64
+img_height = 32
+img_width = 100
+alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+epoch = 20
+display_interval = 20
+save_interval = 10000
+test_interval = 2000
+test_disp = 10
+test_batch_num = 10
