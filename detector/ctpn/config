@@ -1,12 +1,12 @@
 [global]
 using_cuda = True
 epoch = 10
-gpu_id = 5
+gpu_id = 7
 display_file_name = False
 display_iter = 1
-val_iter = 500
-save_iter = 3000
-val_batch = 100
+val_iter = 100
+save_iter = 300
+val_batch = 30
 
 [parameter]
 lr_front = 0.001
