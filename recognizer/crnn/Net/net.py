@@ -1,4 +1,3 @@
-#coding=utf-8
 import torch
 import torch.nn.functional as F
 
@@ -13,7 +12,7 @@ class Vgg_16(torch.nn.Module):
         self.pooling2 = torch.nn.MaxPool2d(2, stride=2)
         self.convolution3 = torch.nn.Conv2d(128, 256, 3, padding=1)
         self.convolution4 = torch.nn.Conv2d(256, 256, 3, padding=1)
-        self.pooling3 = torch.nn.MaxPool2d((1, 2), stride=(2, 1)) #notice stride of the non-square pooling
+        self.pooling3 = torch.nn.MaxPool2d((1, 2), stride=(2, 1)) # notice stride of the non-square pooling
         self.convolution5 = torch.nn.Conv2d(256, 512, 3, padding=1)
         self.BatchNorm1 = torch.nn.BatchNorm2d(512)
         self.convolution6 = torch.nn.Conv2d(512, 512, 3, padding=1)
@@ -35,7 +34,7 @@ class Vgg_16(torch.nn.Module):
         x = F.relu(self.BatchNorm2(x), inplace=True)
         x = self.pooling4(x)
         x = F.relu(self.convolution7(x), inplace=True)
-        return x
+        return x  # 512x1x16
 
 
 class RNN(torch.nn.Module):
@@ -47,14 +46,14 @@ class RNN(torch.nn.Module):
         self.embedding2 = torch.nn.Linear(hidden_unit * 2, class_num)
 
     def forward(self, x):
-        x = self.Bidirectional_LSTM1(x)
-        s, b, l = x[0].size()
-        x = self.embedding1(x[0].view(s * b, l))
-        x = x.view(s, b, -1)
+        x = self.Bidirectional_LSTM1(x)   # LSTM output: (num_layers * num_directions, batch, hidden_size)
+        T, b, h = x[0].size()
+        x = self.embedding1(x[0].view(T * b, h))  # [T * b, nOut]
+        x = x.view(T, b, -1)
         x = self.Bidirectional_LSTM2(x)
-        s, b, l = x[0].size()
-        x = self.embedding2(x[0].view(s * b, l))
-        x = x.view(s, b, -1)
+        T, b, h = x[0].size()
+        x = self.embedding2(x[0].view(T * b, h))
+        x = x.view(T, b, -1)
         return x
 
 
@@ -68,9 +67,12 @@ class CRNN(torch.nn.Module):
 
     def forward(self, x):
         x = self.cnn(x)
-        assert x.shape[2] == 1
-        x = x.squeeze(2)
-        x = x.transpose(0, 2)
-        x = x.transpose(1, 2)
+        b, c, h, w = x.size()
+        # print(x.size()): b,c,h,w
+        assert h == 1   # "the height of conv must be 1"
+        x = x.squeeze(2)  # remove h dimension, b *512 * width
+        x = x.permute(2, 0, 1)  # [w, b, c] = [seq_len, batch, input_size]
+        # x = x.transpose(0, 2)
+        # x = x.transpose(1, 2)
         x = self.rnn(x)
         return x
