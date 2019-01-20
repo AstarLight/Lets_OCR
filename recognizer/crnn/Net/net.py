@@ -34,7 +34,7 @@ class Vgg_16(torch.nn.Module):
         x = F.relu(self.BatchNorm2(x), inplace=True)
         x = self.pooling4(x)
         x = F.relu(self.convolution7(x), inplace=True)
-        return x  # 512x1x16
+        return x  # b*512x1x16
 
 
 class RNN(torch.nn.Module):
@@ -46,17 +46,18 @@ class RNN(torch.nn.Module):
         self.embedding2 = torch.nn.Linear(hidden_unit * 2, class_num)
 
     def forward(self, x):
-        x = self.Bidirectional_LSTM1(x)   # LSTM output: (num_layers * num_directions, batch, hidden_size)
-        T, b, h = x[0].size()
-        x = self.embedding1(x[0].view(T * b, h))  # [T * b, nOut]
-        x = x.view(T, b, -1)
+        x = self.Bidirectional_LSTM1(x)   # LSTM output: output, (h_n, c_n)
+        T, b, h = x[0].size()   # x[0]: (seq_len, batch, num_directions * hidden_size)
+        x = self.embedding1(x[0].view(T * b, h))  # pytorch view() reshape as [T * b, nOut]
+        x = x.view(T, b, -1)  # [16, b, 512]
         x = self.Bidirectional_LSTM2(x)
         T, b, h = x[0].size()
         x = self.embedding2(x[0].view(T * b, h))
         x = x.view(T, b, -1)
-        return x
+        return x  # [16,b,class_num]
 
 
+# output: [s,b,class_num]
 class CRNN(torch.nn.Module):
     def __init__(self, class_num, hidden_unit=256):
         super(CRNN, self).__init__()
