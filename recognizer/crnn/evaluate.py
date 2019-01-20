@@ -1,4 +1,4 @@
-import Dataset
+import lib.dataset
 import Config
 import torch
 
@@ -12,12 +12,12 @@ def val(net, dataset, criterion, converter, image, text, length, max_iter=10):
     net.eval()
     data_loader = torch.utils.data.DataLoader(
         dataset, shuffle=True, batch_size=Config.batch_size, num_workers=int(Config.data_worker),
-        collate_fn=Dataset.alignCollate(imgH=Config.img_height, imgW=Config.img_width, keep_ratio=True))
+        collate_fn=lib.dataset.alignCollate(imgH=Config.img_height, imgW=Config.img_width, keep_ratio=True))
     val_iter = iter(data_loader)
 
     i = 0
     n_correct = 0
-    loss_avg = Dataset.averager()
+    loss_avg = lib.dataset.averager()
 
     max_iter = min(max_iter, len(data_loader))
     for i in range(max_iter):
@@ -25,10 +25,10 @@ def val(net, dataset, criterion, converter, image, text, length, max_iter=10):
         i += 1
         cpu_images, cpu_texts = data
         batch_size = cpu_images.size(0)
-        Dataset.loadData(image, cpu_images)
+        lib.dataset.loadData(image, cpu_images)
         t, l = converter.encode(cpu_texts)
-        Dataset.loadData(text, t)
-        Dataset.loadData(length, l)
+        lib.dataset.loadData(text, t)
+        lib.dataset.loadData(length, l)
 
         preds = net(image)
         preds_size = torch.IntTensor([preds.size(0)] * batch_size)
