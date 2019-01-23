@@ -5,9 +5,9 @@ import os
 import copy
 import lib.dataset_handler
 import torch
+import lib.draw_image
 import Net.net as Net
 import lib.utils
-import lib.draw_image
 import lib.nms
 import math
 import random
@@ -341,8 +341,9 @@ def random_test(net):
 """
 
 if __name__ == '__main__':
+    running_mode = sys.argv[2]  # cpu or gpu
     net = Net.CTPN()
-    net.load_state_dict(torch.load(MODEL))
+    net.load_state_dict(torch.load(MODEL, map_location=running_mode))
     print(net)
     net.eval()
 
