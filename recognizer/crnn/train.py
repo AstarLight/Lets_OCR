@@ -1,4 +1,5 @@
 #coding=utf-8
+
 import Config
 import random
 import os
@@ -25,8 +26,8 @@ def trainBatch(net, criterion, optimizer, train_iter, converter, image, text, le
     lib.dataset.loadData(length, l)
 
     preds = net(image)
-    print("preds.size(0)=%s" % preds.size(0))
-    preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))  # preds.size(0)=w=16
+    #print("preds.size=%s" % preds.size)
+    preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))  # preds.size(0)=w=22
     cost = criterion(preds, text, preds_size, length) / batch_size  # length= a list that contains the len of text label in a batch
     net.zero_grad()
     cost.backward()
@@ -41,6 +42,8 @@ if __name__ == '__main__':
     random.seed(Config.random_seed)
     np.random.seed(Config.random_seed)
     torch.manual_seed(Config.random_seed)
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = Config.gpu_id
 
     cudnn.benchmark = True
     if torch.cuda.is_available() and Config.using_cuda:
@@ -61,7 +64,9 @@ if __name__ == '__main__':
         num_workers=int(Config.data_worker),
         collate_fn=lib.dataset.alignCollate(imgH=Config.img_height, imgW=Config.img_width))
 
-    n_class = len(Config.alphabet) + 1
+    n_class = len(Config.alphabet) + 1  # for python3
+    #n_class = len(Config.alphabet.decode('utf-8')) + 1  # for python2
+    print("alphabet class num is %s" % n_class)
 
     converter = lib.convert.StrConverter(Config.alphabet)
     # print(converter.dict)
@@ -88,7 +93,7 @@ if __name__ == '__main__':
 
     loss_avg = lib.utility.averager()
 
-    optimizer = optim.Adadelta(net.parameters())
+    optimizer = optim.Adadelta(net.parameters(), lr=Config.lr)
 
     for epoch in range(Config.epoch):
         train_iter = iter(train_loader)

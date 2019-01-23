@@ -1,10 +1,9 @@
+#import dataset
 import cv2
 import os
-
 import torch
 from torch.autograd import Variable
 import random
-import dataset
 
 
 def scale_image(img, height, width, keep_ratio=False):
@@ -40,51 +39,6 @@ def get_all_file_path(folder, file_ext=None):
                 else:
                     pass
     return result
-
-
-# def get_batch_data(file_list, batch_size=64, width=100, height=32):
-#     sample = random.sample(file_list, batch_size)
-#     im = []
-#     text = []
-#     for i in sample:
-#         im.append(cv2.imread(i))
-#         label = os.path.splitext(i.split('/')[-1])[0]
-#         label = label.split('_')[1]
-#         text.append(label)
-#     im = np.array(im)
-#     return im, text
-
-
-def create_dataset_port(imgFolderPath, train_outputPath, test_outputPath, train_ratio=0.9, fileExt=None):
-    """
-    for synth 90k dataset
-    """
-    im_list = get_all_file_path(imgFolderPath, file_ext=fileExt)
-    random.shuffle(im_list)
-    im_num = len(im_list)
-    train_num = int(im_num * train_ratio)
-
-    print('Total img number: {0}'.format(im_num))
-    print('Train img number: {0}'.format(train_num))
-    print('Test img number: {0}'.format(im_num - train_num))
-
-    train_list = im_list[0:(train_num - 1)]
-    test_list = im_list[train_num:-1]
-    train_label_list = []
-    test_label_list = []
-    for i in train_list:
-        label = os.path.splitext((i.split('/')[-1]))[0]
-        label = label.split('_')[1]
-        train_label_list.append(label)
-    print('Generate train database.')
-    dataset.createDataset(train_outputPath, train_list, train_label_list)
-
-    for j in test_list:
-        label = os.path.splitext((j.split('/')[-1]))[0]
-        label = label.split('_')[1]
-        test_label_list.append(label)
-    print('Generate test database.')
-    dataset.createDataset(test_outputPath, test_list, test_label_list)
 
 
 def loadData(v, data):

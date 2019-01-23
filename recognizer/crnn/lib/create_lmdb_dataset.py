@@ -4,6 +4,10 @@ import cv2
 import numpy as np
 import os
 
+OUT_PATH = '/home/ljs/OCR_dataset/CRNN_DATA/test_lmdb'
+IN_PATH = '/home/ljs/OCR_dataset/CRNN_DATA/images/360_test.txt'
+PREFIX = '/home/ljs/OCR_dataset/CRNN_DATA/images'
+
 
 def checkImageIsValid(imageBin):
     if imageBin is None:
@@ -42,15 +46,15 @@ def createDataset(outputPath, imagePathList, labelList, lexiconList=None, checkV
     cache = {}
     cnt = 1
     for i in range(nSamples):
-        imagePath = ''.join(imagePathList[i]).split()[0].replace('\n', '').replace('\r\n', '')
-        # print(imagePath)
+        imagePath = os.path.join(PREFIX, imagePathList[i]).split()[0].replace('\n', '').replace('\r\n', '')
+        print(imagePath)
         label = ''.join(labelList[i])
         print(label)
         # if not os.path.exists(imagePath):
         #     print('%s does not exist' % imagePath)
         #     continue
 
-        with open('.' + imagePath, 'r') as f:
+        with open(imagePath, 'r') as f:
             imageBin = f.read()
 
         if checkValid:
@@ -75,9 +79,6 @@ def createDataset(outputPath, imagePathList, labelList, lexiconList=None, checkV
     writeCache(env, cache)
     print('Created dataset with %d samples' % nSamples)
 
-
-OUT_PATH = '../crnn_train_lmdb'
-IN_PATH = './train.txt'
 
 if __name__ == '__main__':
     outputPath = OUT_PATH

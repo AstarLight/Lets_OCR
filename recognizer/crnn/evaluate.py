@@ -1,6 +1,8 @@
+#coding=utf-8
 import lib.dataset
 import Config
 import torch
+import lib.utility
 
 
 def val(net, dataset, criterion, converter, image, text, length, max_iter=10):
@@ -17,7 +19,7 @@ def val(net, dataset, criterion, converter, image, text, length, max_iter=10):
 
     i = 0
     n_correct = 0
-    loss_avg = lib.dataset.averager()
+    loss_avg = lib.utility.averager()
 
     max_iter = min(max_iter, len(data_loader))
     for i in range(max_iter):
@@ -39,13 +41,15 @@ def val(net, dataset, criterion, converter, image, text, length, max_iter=10):
         # preds = preds.squeeze(2)
         preds = preds.transpose(1, 0).contiguous().view(-1)
         sim_preds = converter.decode(preds.data, preds_size.data, raw=False)
+        #print(sim_preds)
         for pred, target in zip(sim_preds, cpu_texts):
             if pred == target:
                 n_correct += 1
 
-    raw_preds = converter.decode(preds.data, preds_size.data, raw=True)[:Config.test_disp]
-    for raw_pred, pred, gt in zip(raw_preds, sim_preds, cpu_texts):
-        print('%-20s => %-20s, gt: %-20s' % (raw_pred, pred, gt))
+    #raw_preds = converter.decode(preds.data, preds_size.data, raw=True)[:Config.test_disp]
+    #for raw_pred, pred, gt in zip(raw_preds, sim_preds, cpu_texts):
+        #print('%-20s => %-20s, gt: %-20s' % (raw_pred, pred, gt))
+
 
     accuracy = n_correct / float(max_iter * Config.batch_size)
     print('Test loss: %f, accuray: %f' % (loss_avg.val(), accuracy))
