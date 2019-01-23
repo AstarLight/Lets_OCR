@@ -9,21 +9,6 @@ class StrConverter:
         for i, char in enumerate(self.alphabet):
             self.dict[char] = i + 1
 
-    # def encode(self, text):
-    #     if isinstance(text, str):
-    #         text_label = [self.dict[char] for char in text]
-    #         text_length = [len(text_label)]
-    #     elif isinstance(text, collections.Iterable):
-    #         text_label = []
-    #         text_length = []
-    #         for t in text:
-    #             label, length = self.encode(t)
-    #             text_label.append(label)
-    #             text_length.append(length)
-    #     else:
-    #         raise TypeError()
-    #     return text_label, text_length
-
     def encode(self, text):
         """Support batch or single str.
 

@@ -34,7 +34,7 @@ class Vgg_16(torch.nn.Module):
         x = F.relu(self.BatchNorm2(x), inplace=True)
         x = self.pooling4(x)
         x = F.relu(self.convolution7(x), inplace=True)
-        return x  # b*512x1x16
+        return x  # b*512x1x22
 
 
 class RNN(torch.nn.Module):
@@ -54,7 +54,7 @@ class RNN(torch.nn.Module):
         T, b, h = x[0].size()
         x = self.embedding2(x[0].view(T * b, h))
         x = x.view(T, b, -1)
-        return x  # [16,b,class_num]
+        return x  # [22,b,class_num]
 
 
 # output: [s,b,class_num]
@@ -69,11 +69,12 @@ class CRNN(torch.nn.Module):
     def forward(self, x):
         x = self.cnn(x)
         b, c, h, w = x.size()
-        # print(x.size()): b,c,h,w
+        #print(x.size())  #: b,c,h,w,(64, 512, 1, 22)
         assert h == 1   # "the height of conv must be 1"
         x = x.squeeze(2)  # remove h dimension, b *512 * width
         x = x.permute(2, 0, 1)  # [w, b, c] = [seq_len, batch, input_size]
         # x = x.transpose(0, 2)
         # x = x.transpose(1, 2)
         x = self.rnn(x)
+        # print(x.size())  # (22, 64, 6736)
         return x
