@@ -8,11 +8,26 @@ import lib.dataset
 from PIL import Image
 import Net.net as Net
 import alphabets
+import numpy as np
+import cv2
 
-crnn_model_path = 'trained_models/mixed_second_finetune_acc97p7.pth'
-IMG_ROOT = './test'
+crnn_model_path = './model/mixed_second_finetune_acc97p7.pth'
+IMG_ROOT = './test_images'
+running_mode = 'gpu'
 alphabet = alphabets.alphabet
 nclass = len(alphabet) + 1
+
+# Testing images are scaled to have height 32. Widths are
+# proportionally scaled with heights, but at least 100 pixels
+def scale_img_para(img, min_width=100, fixed_height=32):
+    height = img.size[1]
+    width = img.size[0]
+    scale = float(fixed_height)/height
+    w = int(width * scale)
+    if w < min_width:
+        w = min_width
+
+    return w, fixed_height
 
 
 def crnn_recognition(cropped_image, model):
@@ -21,8 +36,9 @@ def crnn_recognition(cropped_image, model):
     image = cropped_image.convert('L')
 
     ##
-    w = int(image.size[0] / (280 * 1.0 / 160))
-    transformer = lib.dataset.resizeNormalize((w, 32))
+    #w = int(image.size[0] / (280 * 1.0 / 160))
+    w, h = scale_img_para(image)
+    transformer = lib.dataset.resizeNormalize((w, h))
     image = transformer(image)
     if torch.cuda.is_available():
         image = image.cuda()
@@ -44,11 +60,13 @@ if __name__ == '__main__':
 
     # crnn network
     model = Net.CRNN(nclass)
-    if torch.cuda.is_available():
+    if running_mode == 'gpu' and torch.cuda.is_available():
         model = model.cuda()
-    print('loading pretrained model from {0}'.format(crnn_model_path))
+        model.load_state_dict(torch.load(crnn_model_path))
+    else:
+        model.load_state_dict(torch.load(crnn_model_path, map_location='cpu'))
 
-    model.load_state_dict(torch.load(crnn_model_path))
+    print('loading pretrained model from {0}'.format(crnn_model_path))
 
     files = os.listdir(IMG_ROOT)
     for file in files:
