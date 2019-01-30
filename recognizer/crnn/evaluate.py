@@ -41,8 +41,11 @@ def val(net, dataset, criterion, converter, image, text, length, max_iter=10):
         # preds = preds.squeeze(2)
         preds = preds.transpose(1, 0).contiguous().view(-1)
         sim_preds = converter.decode(preds.data, preds_size.data, raw=False)
+        list_1 = []
+        for i in cpu_texts:
+            list_1.append(i.decode('utf-8', 'strict'))
         #print(sim_preds)
-        for pred, target in zip(sim_preds, cpu_texts):
+        for pred, target in zip(sim_preds, list_1):
             if pred == target:
                 n_correct += 1
 
