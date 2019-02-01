@@ -342,8 +342,12 @@ def random_test(net):
 
 if __name__ == '__main__':
     running_mode = sys.argv[2]  # cpu or gpu
+    print("Mode: %s" % running_mode)
     net = Net.CTPN()
-    net.load_state_dict(torch.load(MODEL, map_location=running_mode))
+    if running_mode == 'cpu':
+        net.load_state_dict(torch.load(MODEL, map_location=running_mode))
+    else:
+        net.load_state_dict(torch.load(MODEL))
     print(net)
     net.eval()
 
