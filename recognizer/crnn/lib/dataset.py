@@ -1,4 +1,4 @@
-
+#!/usr/bin/python
 # encoding: utf-8
 
 import random
@@ -6,13 +6,11 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data import sampler
 import torchvision.transforms as transforms
+import lmdb
 import six
 import sys
 from PIL import Image
 import numpy as np
-import lmdb
-import cv2
-import os
 
 
 class lmdbDataset(Dataset):
@@ -31,7 +29,9 @@ class lmdbDataset(Dataset):
             sys.exit(0)
 
         with self.env.begin(write=False) as txn:
-            nSamples = int(txn.get('num-samples'.encode()))
+
+            str = 'num-samples'
+            nSamples = int(txn.get(str.encode()))
             self.nSamples = nSamples
 
         self.transform = transform
@@ -60,7 +60,7 @@ class lmdbDataset(Dataset):
                 img = self.transform(img)
 
             label_key = 'label-%09d' % index
-            label = str(txn.get(label_key.encode()))
+            label = txn.get(label_key.encode())
 
             if self.target_transform is not None:
                 label = self.target_transform(label)
@@ -110,7 +110,7 @@ class randomSequentialSampler(sampler.Sampler):
 
 class alignCollate(object):
 
-    def __init__(self, imgH=32, imgW=100, keep_ratio=False, min_ratio=1):
+    def __init__(self, imgH=32, imgW=256, keep_ratio=False, min_ratio=1):
         self.imgH = imgH
         self.imgW = imgW
         self.keep_ratio = keep_ratio
@@ -118,8 +118,6 @@ class alignCollate(object):
 
     def __call__(self, batch):
         images, labels = zip(*batch)
-        # print(Image._show(images[0]))
-
         imgH = self.imgH
         imgW = self.imgW
         if self.keep_ratio:
@@ -139,76 +137,5 @@ class alignCollate(object):
         return images, labels
 
 
-def checkImageIsValid(imageBin): # check image and transform image to gray scale
-    if imageBin is None:
-        return False
-    try:
-        imageBuf = np.fromstring(imageBin, dtype=np.uint8)
-        img = cv2.imdecode(imageBuf, cv2.IMREAD_GRAYSCALE)
-    except cv2.error:
-        print('Error!')
-        return False
-    if img is None:
-        return False
-    imgH, imgW = img.shape[0], img.shape[1]
-    if imgH * imgW == 0:
-        return False
-    return True
-
-
-def writeCache(env, cache):
-    with env.begin(write=True) as txn:
-        for k, v in cache.iteritems():
-            txn.put(k, v)
-
-
-def createDataset(outputPath, imagePathList, labelList, lexiconList=None, checkValid=True):
-    """
-    Create LMDB dataset for CRNN training.
-
-    ARGS:
-        outputPath    : LMDB output path
-        imagePathList : list of image path
-        labelList     : list of corresponding groundtruth texts
-        lexiconList   : (optional) list of lexicon lists
-        checkValid    : if true, check the validity of every image
-    """
-    assert(len(imagePathList) == len(labelList))
-    nSamples = len(imagePathList)
-    env = lmdb.open(outputPath, map_size=1099511627776)
-    cache = {}
-    cnt = 1
-    for i in xrange(nSamples):
-        imagePath = imagePathList[i]
-        label = labelList[i]
-        if not os.path.exists(imagePath):
-            print('%s does not exist' % imagePath)
-            continue
-        with open(imagePath, 'r') as f:
-            imageBin = f.read()
-        if checkValid:
-            if not checkImageIsValid(imageBin):
-                print('%s is not a valid image' % imagePath)
-                continue
-
-        imageKey = 'image-%09d' % cnt
-        labelKey = 'label-%09d' % cnt
-        cache[imageKey] = imageBin
-        cache[labelKey] = label
-        if lexiconList:
-            lexiconKey = 'lexicon-%09d' % cnt
-            cache[lexiconKey] = ' '.join(lexiconList[i])
-        if cnt % 1000 == 0:
-            writeCache(env, cache)
-            cache = {}
-            print('Written %d / %d' % (cnt, nSamples))
-        cnt += 1
-    nSamples = cnt-1
-    cache['num-samples'] = str(nSamples)
-    writeCache(env, cache)
-    print('Created dataset with %d samples' % nSamples)
-
-
 def loadData(v, data):
     v.data.resize_(data.size()).copy_(data)
-

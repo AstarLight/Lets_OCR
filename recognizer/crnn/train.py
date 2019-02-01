@@ -13,11 +13,9 @@ import lib.utility
 from torch.autograd import Variable
 import Net.net as Net
 import torch.optim as optim
-import dataset
-import evaluate
 
 
-def val(net, dataset, criterion, max_iter=10):
+def val(net, da, criterion, max_iter=100):
     print('Start val')
 
     for p in net.parameters():
@@ -25,8 +23,7 @@ def val(net, dataset, criterion, max_iter=10):
 
     net.eval()
     data_loader = torch.utils.data.DataLoader(
-        dataset, shuffle=True, batch_size=Config.batch_size, num_workers=int(Config.data_worker),
-        collate_fn=lib.dataset.alignCollate(imgH=Config.img_height, imgW=Config.img_width, keep_ratio=True))
+        da, shuffle=True, batch_size=Config.batch_size, num_workers=int(Config.data_worker))
     val_iter = iter(data_loader)
 
     i = 0
@@ -92,6 +89,9 @@ if __name__ == '__main__':
     if not os.path.exists(Config.model_dir):
         os.mkdir(Config.model_dir)
 
+    print("image scale: [%s,%s]\nmodel_save_path: %s\ngpu_id: %s\nbatch_size: %s" %
+          (Config.img_height, Config.img_width, Config.model_dir, Config.gpu_id, Config.batch_size))
+
     random.seed(Config.random_seed)
     np.random.seed(Config.random_seed)
     torch.manual_seed(Config.random_seed)
@@ -106,11 +106,11 @@ if __name__ == '__main__':
         cuda = False
         print('Using cpu mode')
 
-    train_dataset = dataset.lmdbDataset(root=Config.train_data)
-    test_dataset = dataset.lmdbDataset(root=Config.test_data)
+    train_dataset = lib.dataset.lmdbDataset(root=Config.train_data)
+    test_dataset = lib.dataset.lmdbDataset(root=Config.test_data, transform=lib.dataset.resizeNormalize((Config.img_width, Config.img_height)))
     assert train_dataset
 
-    # images will be resize to 32*160
+    # images will be resize to 32*100
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=Config.batch_size,
         shuffle=True,
@@ -170,7 +170,7 @@ if __name__ == '__main__':
                 loss_avg.reset()
 
             if i % Config.test_interval == 0:
-                val(net, test_dataset, criterion, max_iter=Config.test_batch_num)
+                val(net, test_dataset, criterion)
 
             # do checkpointing
             if i % Config.save_interval == 0:

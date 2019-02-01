@@ -3,42 +3,35 @@ import time
 import torch
 import os
 from torch.autograd import Variable
-import lib.utils
+import lib.convert
 import lib.dataset
 from PIL import Image
 import Net.net as Net
 import alphabets
-import numpy as np
-import cv2
+import sys
+import Config
 
-crnn_model_path = './model/mixed_second_finetune_acc97p7.pth'
+os.environ['CUDA_VISIBLE_DEVICES'] = "4"
+
+crnn_model_path = './w160_bs64_model/netCRNN_4_32000.pth'
 IMG_ROOT = './test_images'
 running_mode = 'gpu'
 alphabet = alphabets.alphabet
 nclass = len(alphabet) + 1
 
-# Testing images are scaled to have height 32. Widths are
-# proportionally scaled with heights, but at least 100 pixels
-def scale_img_para(img, min_width=100, fixed_height=32):
-    height = img.size[1]
-    width = img.size[0]
-    scale = float(fixed_height)/height
-    w = int(width * scale)
-    if w < min_width:
-        w = min_width
-
-    return w, fixed_height
-
 
 def crnn_recognition(cropped_image, model):
-    converter = lib.utils.strLabelConverter(alphabet)
+    converter = lib.convert.strLabelConverter(alphabet)
 
     image = cropped_image.convert('L')
 
-    ##
-    #w = int(image.size[0] / (280 * 1.0 / 160))
-    w, h = scale_img_para(image)
-    transformer = lib.dataset.resizeNormalize((w, h))
+    ### Testing images are scaled to have height 32. Widths are
+    # proportionally scaled with heights, but at least 100 pixels
+    w = int(image.size[0] / (280 * 1.0 / Config.infer_img_w))
+    #scale = image.size[1] * 1.0 / Config.img_height
+    #w = int(image.size[0] / scale)
+
+    transformer = lib.dataset.resizeNormalize((w, Config.img_height))
     image = transformer(image)
     if torch.cuda.is_available():
         image = image.cuda()
@@ -68,13 +61,17 @@ if __name__ == '__main__':
 
     print('loading pretrained model from {0}'.format(crnn_model_path))
 
-    files = os.listdir(IMG_ROOT)
+    files = sorted(os.listdir(IMG_ROOT))
     for file in files:
         started = time.time()
         full_path = os.path.join(IMG_ROOT, file)
+        print("=============================================")
         print("ocr image is %s" % full_path)
         image = Image.open(full_path)
 
         crnn_recognition(image, model)
         finished = time.time()
         print('elapsed time: {0}'.format(finished - started))
+
+    sys.exit()
+
