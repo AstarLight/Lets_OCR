@@ -24,10 +24,7 @@ class strLabelConverter(object):
         for i, char in enumerate(alphabet):
             # NOTE: 0 is reserved for 'blank' required by wrap_ctc
             self.dict[char] = i + 1
-        # print(self.dict)
-        # print(self.dict)
 
-    # print(self.dict)
     def encode(self, text):
         """Support batch or single str.
 
@@ -38,61 +35,15 @@ class strLabelConverter(object):
             torch.IntTensor [length_0 + length_1 + ... length_{n - 1}]: encoded texts.
             torch.IntTensor [n]: length of each text.
         """
-        # length = []
-        # result = []
-        # for t in text:
-        #     list_1 = []
-        #     list_1.append(t[2:-1])
-        # for item in list_1:
-        #     length.append(len(item))
-        #     for char in item:
-        #         char = char.casefold()
-        #         index = self.dict[char]
-        #         result.append(index)
-        # text = result
-        # print(list_1)
-        # print(text[0])
-        # print(text)
-        # if isinstance(text, str):
-        #     # for char in text:
-        #     #     char = char.encode()
-        #     #     print(char)
-        #     #print(text[0])
-        #     #print(text)
 
-        #     text = [
-        #         self.dict[char.lower() if self._ignore_case else char]
-        #         for char in text
-        #     ]
-
-        #     length = [len(text)]
-        # elif isinstance(text, collections.Iterable):
-        #     length = [len(s) for s in text]
-        #     text = ''.join(text)
-        #     text, _ = self.encode(text)
         length = []
         result = []
         for item in text:
             item = item.decode('utf-8', 'strict')
 
             length.append(len(item))
-            # print(len(item))
-            # print('11')
-            # print(item)
             for char in item:
-                # print(char)
-                # char = char.lower()
-                # print(char)
-                # try:
-                #     index = self.dict[char]
-                # except Exception as e:
-                #     pass
-                # else:
-                #     result.append(index)
-                # finally:
-                #     #print(index)
-                #     #result.append(index)
-                #     pass
+
                 index = self.dict[char]
                 result.append(index)
 

@@ -73,5 +73,5 @@ if __name__ == '__main__':
         finished = time.time()
         print('elapsed time: {0}'.format(finished - started))
 
-    sys.exit()
+
 
