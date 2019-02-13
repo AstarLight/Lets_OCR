@@ -30,6 +30,14 @@ cp libwarpctc.so ../../usr/lib
 
 ![](./image_show/504.png)
 
+在图像深度学习训练中我们一般都会把原始数据集转化为lmdb格式以方便后续的网络训练，因此我们也需要对该数据集进行lmdb格式转化。我们需要在文件```./lib/create_lmdb_dataset.py```里修改好要转化的数据集的路径，然后执行以下指令。
+```
+python ./lib/create_lmdb_dataset.py
+```
+
+最后会得到两个lmdb文件：test_lmdb和train_lmdb
+
+
 ## CRNN网络结构
 整体架构：CNN特征提取，RNN序列信息学习，CTC解码
 
@@ -38,13 +46,6 @@ cp libwarpctc.so ../../usr/lib
 实现的具体网络参数：VGG16+BiLSTM+CTC
 
 ![](./image_show/500.png)
-
-在图像深度学习训练中我们一般都会把原始数据集转化为lmdb格式以方便后续的网络训练，因此我们也需要对该数据集进行lmdb格式转化。我们需要在文件```./lib/create_lmdb_dataset.py```里修改好要转化的数据集的路径，然后执行以下指令。
-```
-python ./lib/create_lmdb_dataset.py
-```
-
-最后会得到两个lmdb文件：test_lmdb和train_lmdb
 
 ## 训练
 
