@@ -22,6 +22,12 @@ cp libwarpctc.so ../../usr/lib
 
 ## 数据准备
 
+原始数据下载：
+```
+链接：https://pan.baidu.com/s/1Ef-USCOP5F5cSfmNQESkNw 
+提取码：1giy 
+```
+
 合成的数据：
 
 ![](./image_show/502.png)
