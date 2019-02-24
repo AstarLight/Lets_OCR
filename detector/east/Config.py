@@ -1,5 +1,5 @@
-train_data_path = "/home/ljs/data_ready/ali_icpr"
-test_data_path = ""
+data_path = "/home/ljs/data_ready/ali_icpr"
+
 model_saved_path = "./model"
 gpu_id = '1'    # cpu mode: set this parameter as None
 
@@ -15,5 +15,9 @@ num_workers = 2
 
 resume = False
 check_point = ""
+
+
+
+
 
 

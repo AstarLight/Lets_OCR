@@ -14,6 +14,7 @@ import matplotlib.patches as Patches
 from shapely.geometry import Polygon
 from PIL import Image
 import warnings
+
 from geo_map_cython_lib import gen_geo_map
 
 
@@ -994,7 +995,7 @@ class custom_dset(data.Dataset):
             img_id.append(os.path.basename(self.txt_path_list[i]).strip('.txt'))
             img_id.append(self.img_name_list[i].strip('.jpg'))
             img_id.append(self.txt_name_list[i].strip('.txt'))
-            if (img_id[0] == img_id[1]) & (img_id[2] == img_id[3]) & (img_id[0] == img_id[2]):
+            if ("gt_"+img_id[0] == img_id[1]) & ("gt_"+img_id[2] == img_id[3]) & (img_id[0] == img_id[2]):
                 continue
             else:
                 print(img_id[0])
