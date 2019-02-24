@@ -1,6 +1,8 @@
 import torch
 import os
 from torch import nn
+import sys
+sys.path.append("./east_lib")
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 import Net.net as Net
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     warnings.simplefilter('ignore', np.RankWarning)
     # Prepare for dataset
     print('EAST <==> Prepare <==> DataLoader <==> Begin')
-    train_root_path = cfg.train_data_path
+    train_root_path = cfg.data_path
     train_img = os.path.join(train_root_path, 'train_im')
     train_gt = os.path.join(train_root_path, 'train_gt')
 
@@ -97,8 +99,8 @@ if __name__ == "__main__":
     train_loader = DataLoader(trainset, batch_size=cfg.batch_size,
                               shuffle=True, collate_fn=Lib.collate_fn, num_workers=cfg.num_workers)
 
-    test_root_path = cfg.test_data_path
-    test_img = os.path.join(test_root_path, 'test_img')
+    test_root_path = cfg.data_path
+    test_img = os.path.join(test_root_path, 'test_im')
     test_gt = os.path.join(test_root_path, 'test_gt')
 
     testset = Lib.custom_dset(test_img, test_gt)
@@ -115,6 +117,7 @@ if __name__ == "__main__":
     # Model
     print('EAST <==> Prepare <==> Network <==> Begin')
     model = Net.EAST()
+    print(model)
     #model = nn.DataParallel(model, device_ids=cfg.gpu_id)
     model = model.cuda()
     #init_weights(model, init_type=cfg.init_type)
