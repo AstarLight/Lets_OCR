@@ -18,7 +18,7 @@ import numpy as np
 
 os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu_id
 
-def val(test_loader, model, criterion, epoch, iter):
+def val(test_loader, model, criterion, epoch):
     print("Start val...")
     losses = Lib.AverageMeter()
 
@@ -31,8 +31,8 @@ def val(test_loader, model, criterion, epoch, iter):
         loss = criterion(score_map, f_score, geo_map, f_geometry, training_mask)
         losses.update(loss.item(), img.size(0))
 
-    print('EAST <==> VAL <==> Epoch: [{0}][{1}] Loss {loss.val:.4f} Avg Loss {loss.avg:.4f})\n'.format(
-        epoch, iter, loss=losses))
+    print('EAST <==> VAL <==> Epoch: [epoch {0}] Loss {loss.val:.4f} Avg Loss {loss.avg:.4f})\n'.format(
+        epoch, loss=losses))
 
 
 def train(train_loader, test_loader, model, criterion, scheduler, optimizer, epoch):
@@ -66,17 +66,6 @@ def train(train_loader, test_loader, model, criterion, scheduler, optimizer, epo
         if i % cfg.display_iter == 0:
             print('EAST <==> TRAIN <==> Epoch: [{0}][{1}/{2}] Loss {loss.val:.4f} Avg Loss {loss.avg:.4f})\n'.format(
                 epoch, i, len(train_loader), loss=losses))
-
-        if i % cfg.save_iter == 0:
-            print('Model saved at east-{0}-{1}.model'.format(epoch, i))
-            torch.save(model.state_dict(),
-                       os.path.join(cfg.model_saved_path, 'east-msra_ali-{0}-{1}-end.model'.format(epoch, i)))
-
-        if i % cfg.val_iter == 0:
-            model.eval()
-            print('Start evaluate at {0} epoch {1} iteration.'.format(epoch, i))
-            val(test_loader, model, criterion, epoch, i)
-            model.train()
 
         #save_loss_info(losses, epoch, i, train_loader)
 
@@ -125,7 +114,7 @@ if __name__ == "__main__":
 
     criterion = Loss.EAST_Loss()
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=10000, gamma=0.94)
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.94)
 
     # init or resume
     if cfg.resume and os.path.isfile(cfg.check_point):
@@ -143,7 +132,15 @@ if __name__ == "__main__":
     for epoch in range(start_epoch, cfg.epoch):
 
         train(train_loader, test_loader, model, criterion, scheduler, optimizer, epoch)
-        torch.save(model.state_dict(),
-                   os.path.join(cfg.model_saved_path, 'east-msra_ali-{0}-end.model'.format(cfg.epoch)))
+
+        if epoch % cfg.val_iter == 0:
+            model.eval()
+            print('Start evaluate at epoch {0} iteration.'.format(epoch))
+            val(test_loader, model, criterion, epoch)
+            model.train()
+
+        if (epoch+1) % cfg.save_iter == 0:
+            torch.save(model.state_dict(),
+                       os.path.join(cfg.model_saved_path, 'east-msra_ali-{0}-end.model'.format(cfg.epoch)))
 
     torch.save(model.state_dict(), os.path.join(cfg.model_saved_path, 'final_east-msra_ali-{0}-end.model'.format(cfg.epoch)))

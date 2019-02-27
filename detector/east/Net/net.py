@@ -51,6 +51,10 @@ class EAST(nn.Module):
         super(EAST, self).__init__()
         # feature extractor stem: resnet50
         self.bbNet = pm.__dict__['resnet50'](pretrained='imagenet') # resnet50 in paper
+        self.bbNet.eval()
+        # backbone as feature extractor
+        for param in self.bbNet.parameters():
+            param.requires_grad = False
 
         # feature-merging branch
         self.mergeLayers0 = DummyLayer()
@@ -85,7 +89,7 @@ class EAST(nn.Module):
         conv4 = None
         output = None  # batch_Size * 7 * 7 * 2048
 
-        for name, layer in self.backbone.named_children():
+        for name, layer in self.bbNet.named_children():
             input = layer(input)
             if name == 'layer1':
                 conv2 = input
@@ -118,13 +122,13 @@ class EAST(nn.Module):
 
         return images
 
-    def forward(self):
+    def forward(self, input):
 
-        self.bbNet = self.__mean_image_subtraction(self.bbNet)
+        input = self.__mean_image_subtraction(input)
 
         # bottom up
 
-        f = self.__foward_backbone(self.bbNet)
+        f = self.__foward_backbone(input)
 
         g = [None] * 4
         h = [None] * 4
