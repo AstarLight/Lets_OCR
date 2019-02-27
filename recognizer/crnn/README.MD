@@ -11,6 +11,7 @@ CTC安装：
 ```
 git clone https://github.com/SeanNaren/warp-ctc.git
 cd warp-ctc
+git checkout ac045b6072b9bc3454fb9f9f17674f0d59373789
 mkdir build; cd build
 cmake ..
 make
