@@ -4,3 +4,4 @@ A repository for OCR, which inlcudes some classical OCR algorithms implementatio
 
 - [CTPN](https://github.com/AstarLight/Lets_OCR/tree/master/detector/ctpn)
 - [CRNN](https://github.com/AstarLight/Lets_OCR/tree/master/recognizer/crnn)
+- [EAST](https://github.com/AstarLight/Lets_OCR/tree/master/detector/ctpn) （under developing）
