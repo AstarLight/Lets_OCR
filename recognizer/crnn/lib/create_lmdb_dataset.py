@@ -1,4 +1,3 @@
-
 import lmdb
 import cv2
 import numpy as np
@@ -26,7 +25,9 @@ def checkImageIsValid(imageBin):
 
 def writeCache(env, cache):
     with env.begin(write=True) as txn:
-        for k, v in cache.items():
+        for _k, _v in cache.items():
+            k = _k.encode() if type(_k) == str else _k
+            v = _v.encode() if type(_v) == str else _v
             txn.put(k, v)
 
 
@@ -54,7 +55,7 @@ def createDataset(outputPath, imagePathList, labelList, lexiconList=None, checkV
         #     print('%s does not exist' % imagePath)
         #     continue
 
-        with open(imagePath, 'r') as f:
+        with open(imagePath, 'rb') as f:
             imageBin = f.read()
 
         if checkValid:
