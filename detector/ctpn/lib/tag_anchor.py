@@ -2,22 +2,18 @@ import numpy as np
 import math
 
 
-def cal_IoU(cy1, h1, cy2, h2):
+def cal_IoU2(cy1, h1, cy2, h2):
     y_top1, y_bottom1 = cal_y(cy1, h1)
     y_top2, y_bottom2 = cal_y(cy2, h2)
-    offset = min(y_top1, y_top2)
-    y_top1 = y_top1 - offset
-    y_top2 = y_top2 - offset
-    y_bottom1 = y_bottom1 - offset
-    y_bottom2 = y_bottom2 - offset
-    line = np.zeros(max(y_bottom1, y_bottom2) + 1)
-    for i in range(y_top1, y_bottom1 + 1):
-        line[i] += 1
-    for j in range(y_top2, y_bottom2 + 1):
-        line[j] += 1
-    union = np.count_nonzero(line, 0)
-    intersection = line[line == 2].size
-    return float(intersection)/float(union)
+    y_top_min = min(y_top1, y_top2)
+    y_bottom_max = max(y_bottom1, y_bottom2)
+    union = y_bottom_max - y_top_min + 1
+    intersection = h1 + h2 - union
+    iou = float(intersection)/float(union)
+    if iou<0:
+        return 0.0
+    else:
+        return iou
 
 
 def cal_y(cy, h):
