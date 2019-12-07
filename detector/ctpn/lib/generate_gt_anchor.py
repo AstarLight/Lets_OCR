@@ -42,46 +42,207 @@ def generate_gt_anchor(img, box, anchor_width=16, draw_img_gt=None):
     return result, draw_img_gt
 
 
-# cal the gt anchor box's bottom and top coordinate
+# 将可能随机排列的坐标点，统一重新排列成左下、左上、右上、右下排列
+def sortCoords(box):
+    coords = [[box[0],box[1]],[box[2],box[3]],[box[4],box[5]],[box[6],box[7]]]
+    coords_x = [box[0],box[2],box[4],box[6]]
+    coords_x.sort()
+    coords_left = []
+    coords_right = []
+    for i in range(4):
+        if coords[i][0] == coords_x[0] or coords[i][0] == coords_x[1]:
+            coords_left.append(coords[i])
+        else:
+            coords_right.append(coords[i])
+    new_box = []
+    if coords_left[0][1] < coords_left[1][1]:
+        new_box += coords_left[0]
+        new_box += coords_left[1]
+    else:
+        new_box += coords_left[1]
+        new_box += coords_left[0]
+    if coords_right[0][1] > coords_right[1][1]:
+        new_box += coords_right[0]
+        new_box += coords_right[1]
+    else:
+        new_box += coords_right[1]
+        new_box += coords_right[0]
+
+    return new_box
+
+# 由x值计算y值
+def calcY(x, param):
+    a = param[0]
+    b = param[1]
+    c = param[2]
+    if b!=0:
+        return int(-(c+a*x)/b)
+    else:
+        return 0
+
+# 计算BBOX四条边所在的直线
+def calcLine(box): 
+    x1 = box[0]
+    x2 = box[2]
+    x3 = box[4]
+    x4 = box[6]
+    y1 = box[1]
+    y2 = box[3]
+    y3 = box[5]
+    y4 = box[7]
+
+    # l12
+    a12 = y2 - y1
+    b12 = x1 - x2
+    c12 = x2 * y1 - x1 * y2
+    line12 = [a12,b12,c12]
+
+    # l34
+    a34 = y4 - y3
+    b34 = x3 - x4
+    c34 = x4 * y3 - x3 * y4
+    line34 = [a34,b34,c34]
+
+    # l14
+    a14 = y4 - y1
+    b14 = x1 - x4
+    c14 = x4 * y1 - x1 * y4
+    line14 = [a14,b14,c14]
+
+    # l23
+    a23 = y3 - y2
+    b23 = x2 - x3
+    c23 = x3 * y2 - x2 * y3
+    line23 = [a23,b23,c23]
+
+    return [line14,line23,line12,line34]
+
+
+# 计算每个anchor的上下边界
 def cal_y_top_and_bottom(raw_img, position_pair, box):
-    """
-    :param raw_img:
-    :param position_pair: for example:[(0, 15), (16, 31), ...]
-    :param box: gt box (4 point)
-    :return: top and bottom coordinates for y-axis
-    """
-    img = copy.deepcopy(raw_img)
     y_top = []
     y_bottom = []
-    height = img.shape[0]
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
-            img[i, j, 0] = 0
-    top_flag = False
-    bottom_flag = False
-    img = draw_image.draw_box_4pt(img, box, color=(255, 0, 0))
-    # calc top y coordinate, pixel from top to down loop
+    box = sortCoords(box)
+    lines = calcLine(box)
+    whichline = []
     for k in range(len(position_pair)):
-        # calc top y coordinate
-        for y in range(0, height-1):
-            # loop each anchor, from left to right
-            for x in range(position_pair[k][0], position_pair[k][1] + 1):
-                if img[y, x, 0] == 255:
-                    y_top.append(y)
-                    top_flag = True
-                    break
-            if top_flag is True:
-                break
-        # calc bottom y coordinate, pixel from down to top loop
-        for y in range(height - 1, -1, -1):
-            # loop each anchor, from left to right
-            for x in range(position_pair[k][0], position_pair[k][1] + 1):
-                if img[y, x, 0] == 255:
-                    y_bottom.append(y)
-                    bottom_flag = True
-                    break
-            if bottom_flag is True:
-                break
-        top_flag = False
-        bottom_flag = False
-    return y_top, y_bottom
+        box_x = [box[0],box[2],box[4],box[6]]
+        box_x.sort()
+        box_left_left = box_x[0]
+        box_left_right = box_x[1]
+        box_right_left = box_x[2]
+        box_right_right = box_x[3]
+        anchor_middle_x = position_pair[k][0] + 7.5
+
+        if anchor_middle_x >= box_left_right and anchor_middle_x <= box_right_left:  # 位于box中段的
+            anchor_y_top = calcY(anchor_middle_x, lines[0])
+            anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+            y_top.append(anchor_y_top)
+            y_bottom.append(anchor_y_bottom)
+            whichline.append(1)
+            continue
+
+        elif anchor_middle_x > box_left_left and anchor_middle_x < box_left_right:  # 位于左边界上的
+            if lines[2][1] == 0:
+                anchor_y_top = calcY(anchor_middle_x, lines[0])
+                anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+                y_top.append(anchor_y_top)
+                y_bottom.append(anchor_y_bottom)
+                continue
+            k_l12 = -(lines[2][0]/lines[2][1])
+            anchor_y_top = calcY(anchor_middle_x, lines[0])
+            anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+            if k_l12 > 0:
+                anchor_y_top = calcY(anchor_middle_x, lines[0])
+                anchor_y_bottom = calcY(anchor_middle_x, lines[2])
+            else:
+                anchor_y_top = calcY(anchor_middle_x, lines[2])
+                anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+            y_top.append(anchor_y_top)
+            y_bottom.append(anchor_y_bottom)
+            whichline.append(2)
+            continue
+
+        elif anchor_middle_x <= box_left_left:
+            anchor_middle_x = position_pair[k][1]  # 如果左边界外的，则用anchor右边缘替代中线
+            if anchor_middle_x > box_right_right:  # 如果box很小时，anchor右边界超出box右边界，此时将anchor_middle_x替换为box_left_right
+                anchor_middle_x = box_left_right
+            if anchor_middle_x >= box_left_right and anchor_middle_x <= box_right_left:  # 位于box中段的
+                anchor_y_top = calcY(anchor_middle_x, lines[0])
+                anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+                y_top.append(anchor_y_top)
+                y_bottom.append(anchor_y_bottom)
+                whichline.append(3)
+                continue
+            else:
+                if lines[2][1] == 0:
+                    anchor_y_top = calcY(anchor_middle_x, lines[0])
+                    anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+                    y_top.append(anchor_y_top)
+                    y_bottom.append(anchor_y_bottom)
+                    continue
+                k_l12 = -(lines[2][0]/lines[2][1])
+                if k_l12 > 0:
+                    anchor_y_top = calcY(anchor_middle_x, lines[0])
+                    anchor_y_bottom = calcY(anchor_middle_x, lines[2])
+                else:
+                    anchor_y_top = calcY(anchor_middle_x, lines[2])
+                    anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+                y_top.append(anchor_y_top)
+                y_bottom.append(anchor_y_bottom)
+                whichline.append(4)
+                continue
+
+        elif anchor_middle_x > box_right_left and anchor_middle_x < box_right_right:  # 位于右边界上的
+            if lines[3][1] == 0:
+                anchor_y_top = calcY(anchor_middle_x, lines[0])
+                anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+                y_top.append(anchor_y_top)
+                y_bottom.append(anchor_y_bottom)
+                continue
+            k_l34 = -(lines[3][0]/lines[3][1])
+            if k_l34> 0:
+                anchor_y_top = calcY(anchor_middle_x, lines[3])
+                anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+            else:
+                anchor_y_top = calcY(anchor_middle_x, lines[0])
+                anchor_y_bottom = calcY(anchor_middle_x, lines[3])
+            y_top.append(anchor_y_top)
+            y_bottom.append(anchor_y_bottom)
+            whichline.append(5)
+            continue
+
+        elif anchor_middle_x >= box_right_right:
+            anchor_middle_x = position_pair[k][0]  # anchor左边界替代中线
+            if anchor_middle_x < box_left_left:  # 如果box很小时，anchor左边界超出box左边界，此时将anchor_middle_x替换为box_right_left
+                anchor_middle_x = box_right_left
+            if anchor_middle_x >= box_left_right and anchor_middle_x <= box_right_left:  # 位于box中段的
+                anchor_y_top = calcY(anchor_middle_x, lines[0])
+                anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+                y_top.append(anchor_y_top)
+                y_bottom.append(anchor_y_bottom)
+                whichline.append(6)
+                continue
+            else:
+                if lines[3][1] == 0:
+                    anchor_y_top = calcY(anchor_middle_x, lines[0])
+                    anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+                    y_top.append(anchor_y_top)
+                    y_bottom.append(anchor_y_bottom)
+                    continue
+                k_l34 = -(lines[3][0]/lines[3][1]) 
+                if k_l34 > 0:
+                    anchor_y_top = calcY(anchor_middle_x, lines[3])
+                    anchor_y_bottom = calcY(anchor_middle_x, lines[1])
+                else:
+                    anchor_y_top = calcY(anchor_middle_x, lines[0])
+                    anchor_y_bottom = calcY(anchor_middle_x, lines[3])
+                y_top.append(anchor_y_top)
+                y_bottom.append(anchor_y_bottom)
+                whichline.append(7)
+                continue
+    
+    # print(y_top)
+    # print(y_bottom)
+    # print(whichline)
+    return y_top,y_bottom
